@@ -1,0 +1,735 @@
+{
+  "categories": [
+    {
+      "name": "Dull Skin",
+      "slug": "dull-skin",
+      "description": "Revive radiance and restore a lit-from-within glow.",
+      "sort_order": 0
+    },
+    {
+      "name": "Wrinkles",
+      "slug": "wrinkles",
+      "description": "Smooth fine lines and support firmer, bouncier skin.",
+      "sort_order": 1
+    },
+    {
+      "name": "Acne",
+      "slug": "acne",
+      "description": "Unclog pores, balance sebum and calm breakouts.",
+      "sort_order": 2
+    },
+    {
+      "name": "Dryness",
+      "slug": "dryness",
+      "description": "Deep, lasting hydration for a healthy skin barrier.",
+      "sort_order": 3
+    },
+    {
+      "name": "Dark Spots",
+      "slug": "dark-spots",
+      "description": "Fade spots and post-blemish marks for an even tone.",
+      "sort_order": 4
+    },
+    {
+      "name": "Sun Damaged Skin",
+      "slug": "sun-damage",
+      "description": "Antioxidant defence against UV-induced dullness.",
+      "sort_order": 5
+    },
+    {
+      "name": "Dark Circles",
+      "slug": "dark-circles",
+      "description": "Brighten and de-puff the delicate under-eye area.",
+      "sort_order": 6
+    },
+    {
+      "name": "Hair Loss",
+      "slug": "hair-loss",
+      "description": "Strengthen roots and support fuller-looking hair.",
+      "sort_order": 7
+    },
+    {
+      "name": "Pigmentation",
+      "slug": "pigmentation",
+      "description": "Target uneven tone and stubborn pigmentation.",
+      "sort_order": 8
+    }
+  ],
+  "products": [
+    {
+      "name": "Dermisque 3X Vitamin C Face Serum",
+      "slug": "vitamin-c-face-serum",
+      "tagline": "For glowing, redensified & younger-looking skin",
+      "description": "A brightening powerhouse that combines three forms of Vitamin C with Hyaluronic Acid and antioxidants. It helps even out skin tone, fade dark spots over time, defend against sun damage, and support your skin barrier and natural collagen for clearer, brighter, smoother skin.",
+      "price": 2500,
+      "image": "/products/vitamin-c.webp",
+      "size": "25 ml / 0.84 fl oz",
+      "featured": true,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Silanol-infused Ascorbic Acid",
+          "detail": "Ascorbyl methylsilanol pectinate — a Vitamin C form designed for better penetration."
+        },
+        {
+          "name": "Superox-C AF",
+          "detail": "Kakadu plum extract, rich in natural Vitamin C, for hydration and fewer fine lines."
+        },
+        {
+          "name": "3-O-Ethyl Ascorbic Acid",
+          "detail": "A stable Vitamin C derivative that helps even skin tone."
+        },
+        {
+          "name": "Epidermosil",
+          "detail": "Silanetriol and Hyaluronic Acid for hydration and smoothness."
+        },
+        {
+          "name": "Licorice, Vitamin E, D-Panthenol & Allantoin",
+          "detail": "Soothing, antioxidant support."
+        }
+      ],
+      "benefits": [
+        "Restores the skin barrier",
+        "Achieves even skin tone",
+        "Clearer, brighter, smoother skin",
+        "Helps fade fine lines & wrinkles"
+      ],
+      "how_to_use": [
+        "Cleanse your face and pat dry.",
+        "Dispense 2–3 drops (a pea-sized amount) onto your fingertips.",
+        "Dot over the face and neck, avoiding the eye area, then gently pat in until absorbed.",
+        "Follow with moisturiser. In the morning, always finish with broad-spectrum sunscreen.",
+        "Use consistently, once or twice daily, for best results."
+      ],
+      "faqs": [
+        {
+          "q": "What are the main benefits?",
+          "a": "It helps reduce dark spots, even out skin tone and boost radiance."
+        },
+        {
+          "q": "Can it help with fine lines?",
+          "a": "Yes — the Superox-C component helps diminish the appearance of fine lines."
+        },
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "dull-skin",
+        "dark-spots",
+        "sun-damage",
+        "pigmentation"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Lip Serum",
+      "slug": "lip-serum",
+      "tagline": "Hydrate, plump & repair",
+      "description": "A nourishing roll-on lip treatment with Caprylic Triglyceride, Vitamin C and Vitamin E. It locks in moisture, helps lips look fuller and supports the delicate lip skin barrier for soft, smooth, healthy-looking lips.",
+      "price": 5500,
+      "image": "/products/lip-serum.webp",
+      "size": "10 ml",
+      "featured": false,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Caprylic Triglyceride",
+          "detail": "A lightweight emollient that softens and seals in moisture."
+        },
+        {
+          "name": "Vitamin C",
+          "detail": "Antioxidant care that helps brighten dull, pigmented lips."
+        },
+        {
+          "name": "Vitamin E",
+          "detail": "Nourishes and protects the lip barrier."
+        }
+      ],
+      "benefits": [
+        "Hydrates the lips",
+        "Plumps the lips",
+        "Repairs the lip skin barrier"
+      ],
+      "how_to_use": [
+        "Glide the roller gently over clean lips.",
+        "Use as often as needed throughout the day.",
+        "Apply generously at night as an overnight treatment."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "dryness"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Skin Brightening Face Serum",
+      "slug": "skin-brightening-face-serum",
+      "tagline": "Niacinamide 10% for an even, balanced complexion",
+      "description": "Formulated with Niacinamide 10%, Tranexamic Acid and Zinc PCA to even skin tone, fade scars and pigmentation, regulate excess sebum and reduce oxidative stress — for a clear, balanced, brighter complexion.",
+      "price": 3000,
+      "image": "/products/skin-brightening.webp",
+      "size": "30 ml / 1.01 fl oz",
+      "featured": true,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Niacinamide 10%",
+          "detail": "Vitamin B3 that brightens and refines the look of pores."
+        },
+        {
+          "name": "Tranexamic Acid",
+          "detail": "Targets stubborn pigmentation and discolouration."
+        },
+        {
+          "name": "Zinc PCA",
+          "detail": "Helps regulate sebum and keep breakouts in check."
+        }
+      ],
+      "benefits": [
+        "Evens the skin tone",
+        "Prevents acne",
+        "Regulates sebum",
+        "Reduces oxidative stress"
+      ],
+      "how_to_use": [
+        "Cleanse your face and pat dry.",
+        "Dispense 2–3 drops (a pea-sized amount) onto your fingertips.",
+        "Dot over the face and neck, avoiding the eye area, then gently pat in until absorbed.",
+        "Follow with moisturiser. In the morning, always finish with broad-spectrum sunscreen.",
+        "Use consistently, once or twice daily, for best results."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "dull-skin",
+        "acne",
+        "pigmentation"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Skin Hydrating Face Serum",
+      "slug": "skin-hydrating-face-serum",
+      "tagline": "Technology-infused Hyaluronic Acid with Silanol",
+      "description": "Technology-infused Hyaluronic Acid with Silanol, Niacinamide and Centella Asiatica extract delivers deep, long-lasting moisture. It promotes skin radiance, maintains a healthy skin barrier and smooths the look of fine lines.",
+      "price": 4300,
+      "image": "/products/skin-hydrating.png",
+      "size": "30 ml / 1.01 fl oz",
+      "featured": true,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Hyaluronic Acid + Silanol",
+          "detail": "Multi-weight hydration that plumps and smooths."
+        },
+        {
+          "name": "Niacinamide",
+          "detail": "Supports the barrier and improves radiance."
+        },
+        {
+          "name": "Centella Asiatica Extract",
+          "detail": "Calms and soothes stressed skin."
+        }
+      ],
+      "benefits": [
+        "Moisturises superbly",
+        "Promotes skin radiance",
+        "Maintains the skin barrier",
+        "Smooths skin & fine lines"
+      ],
+      "how_to_use": [
+        "Cleanse your face and pat dry.",
+        "Dispense 2–3 drops (a pea-sized amount) onto your fingertips.",
+        "Dot over the face and neck, avoiding the eye area, then gently pat in until absorbed.",
+        "Follow with moisturiser. In the morning, always finish with broad-spectrum sunscreen.",
+        "Use consistently, once or twice daily, for best results."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "wrinkles",
+        "dryness"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Skin Exfoliating Face Serum",
+      "slug": "skin-exfoliating-face-serum",
+      "tagline": "AHA–BHA resurfacing for clear, bright skin",
+      "description": "A gentle chemical exfoliant powered by AHA–BHA, Salicylic Acid and Mandelic Acid. It reduces excess sebum, unclogs pores and helps control breakouts while revealing brighter, smoother skin.",
+      "price": 2100,
+      "image": "/products/skin-exfoliating.jpg",
+      "size": "30 ml / 1.01 fl oz",
+      "featured": false,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "AHA–BHA Complex",
+          "detail": "Dissolves dead skin cells for a smoother texture."
+        },
+        {
+          "name": "Salicylic Acid",
+          "detail": "Oil-soluble BHA that clears congested pores."
+        },
+        {
+          "name": "Mandelic Acid",
+          "detail": "A gentle AHA suited to sensitive and acne-prone skin."
+        }
+      ],
+      "benefits": [
+        "Reduces excess sebum production",
+        "Unclogs pores",
+        "Brightens up the skin"
+      ],
+      "how_to_use": [
+        "Use in the evening on clean, dry skin, 2–3 times a week to start.",
+        "Apply 2–3 drops and spread evenly, avoiding the eye area.",
+        "Follow with moisturiser. Always use sunscreen the next morning."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "dull-skin",
+        "acne"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Under Eye Serum",
+      "slug": "under-eye-serum",
+      "tagline": "Fast-absorbing, non-sticky roller serum",
+      "description": "A cooling roll-on serum with Epidermosil, Shadownyl and SYN®-COLL that targets dark circles and puffiness while softening fine lines and crow's feet. Fast-absorbing and non-sticky.",
+      "price": 5200,
+      "image": "/products/under-eye.jpg",
+      "size": "15 g / 0.53 oz",
+      "featured": true,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Epidermosil",
+          "detail": "Hydrates and smooths the delicate eye contour."
+        },
+        {
+          "name": "Shadownyl",
+          "detail": "Helps visibly reduce the darkness of under-eye circles."
+        },
+        {
+          "name": "SYN®-COLL",
+          "detail": "A peptide that supports collagen for firmer-looking skin."
+        }
+      ],
+      "benefits": [
+        "Reduces dark circles & puffiness",
+        "Softens fine lines & crow's feet",
+        "Fast-absorbing & non-sticky"
+      ],
+      "how_to_use": [
+        "Begin by thoroughly cleansing your skin.",
+        "Dispense 3–4 drops onto the roller and gently glide it under your eye.",
+        "Pat in any excess serum. Recommended at night before bedtime."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "wrinkles",
+        "dark-circles"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Dark Spot Corrector Face Serum",
+      "slug": "dark-spot-corrector-face-serum",
+      "tagline": "Alpha Arbutin, Niacinamide & Kojic Acid",
+      "description": "A targeted corrector with Alpha Arbutin, Niacinamide and Kojic Acid that helps reduce pigmentation and dark spots, brighten the skin and refine skin texture for a visibly more even complexion.",
+      "price": 3300,
+      "image": "/products/dark-spot.webp",
+      "size": "30 ml / 1.01 fl oz",
+      "featured": true,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Alpha Arbutin",
+          "detail": "Helps fade the look of dark spots."
+        },
+        {
+          "name": "Niacinamide",
+          "detail": "Evens tone and strengthens the barrier."
+        },
+        {
+          "name": "Kojic Acid",
+          "detail": "Brightens and targets discolouration."
+        }
+      ],
+      "benefits": [
+        "Reduces pigmentation & dark spots",
+        "Brightens up the skin",
+        "Improves skin texture"
+      ],
+      "how_to_use": [
+        "Cleanse your face and pat dry.",
+        "Dispense 2–3 drops (a pea-sized amount) onto your fingertips.",
+        "Dot over the face and neck, avoiding the eye area, then gently pat in until absorbed.",
+        "Follow with moisturiser. In the morning, always finish with broad-spectrum sunscreen.",
+        "Use consistently, once or twice daily, for best results."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "dark-spots",
+        "pigmentation"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Gluta Glow Face Serum",
+      "slug": "gluta-glow-face-serum",
+      "tagline": "Liposomal Glutathione for luminous skin",
+      "description": "Liposomal Glutathione, Vitamin C and Melazero work together to reduce the look of wrinkles and freckles, regulate melanin production and protect skin from sun damage for a luminous, youthful glow.",
+      "price": 3400,
+      "image": "/products/gluta-glow.webp",
+      "size": "30 ml / 1.01 fl oz",
+      "featured": false,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Liposomal Glutathione",
+          "detail": "Encapsulated master antioxidant for deeper delivery."
+        },
+        {
+          "name": "Vitamin C",
+          "detail": "Brightens and defends against free radicals."
+        },
+        {
+          "name": "Melazero",
+          "detail": "Helps regulate melanin for a more even tone."
+        }
+      ],
+      "benefits": [
+        "Reduces wrinkles & freckles",
+        "Reduces melanin production",
+        "Protects from sun damage"
+      ],
+      "how_to_use": [
+        "Cleanse your face and pat dry.",
+        "Dispense 2–3 drops (a pea-sized amount) onto your fingertips.",
+        "Dot over the face and neck, avoiding the eye area, then gently pat in until absorbed.",
+        "Follow with moisturiser. In the morning, always finish with broad-spectrum sunscreen.",
+        "Use consistently, once or twice daily, for best results."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "wrinkles",
+        "sun-damage",
+        "pigmentation"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Aloe Glow Face Serum",
+      "slug": "aloe-glow-face-serum",
+      "tagline": "Soothe, moisturise, calm & repair",
+      "description": "A calming serum with Aloe Vera Extract, Pro-Vitamin B3 and Withania Somnifera (Ashwagandha) that soothes, moisturises, calms and repairs skin, reduces fine lines and wrinkles, and helps protect against sun damage.",
+      "price": 2600,
+      "image": "/products/aloe-glow.webp",
+      "size": "30 ml / 1.01 fl oz",
+      "featured": false,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Aloe Vera Extract",
+          "detail": "Soothes, cools and hydrates."
+        },
+        {
+          "name": "Pro-Vitamin B3",
+          "detail": "Supports a resilient, radiant complexion."
+        },
+        {
+          "name": "Withania Somnifera",
+          "detail": "Ashwagandha — an adaptogen that helps calm stressed skin."
+        }
+      ],
+      "benefits": [
+        "Soothes, moisturises, calms & repairs skin",
+        "Reduces fine lines and wrinkles",
+        "Protects against sun damage"
+      ],
+      "how_to_use": [
+        "Cleanse your face and pat dry.",
+        "Dispense 2–3 drops (a pea-sized amount) onto your fingertips.",
+        "Dot over the face and neck, avoiding the eye area, then gently pat in until absorbed.",
+        "Follow with moisturiser. In the morning, always finish with broad-spectrum sunscreen.",
+        "Use consistently, once or twice daily, for best results."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "dull-skin",
+        "dryness",
+        "sun-damage"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Anti Aging Face Serum",
+      "slug": "anti-aging-face-serum",
+      "tagline": "Retinol, Witch Hazel & Vitamin E",
+      "description": "A renewing night serum with Retinol, Witch Hazel Extract and Vitamin E that helps reduce fine lines and wrinkles, promotes skin hydration and elasticity, fades dark spots and helps prevent acne.",
+      "price": 3400,
+      "image": "/products/anti-aging.webp",
+      "size": "30 ml / 1.01 fl oz",
+      "featured": true,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Retinol",
+          "detail": "Gold-standard renewal for smoother, firmer-looking skin."
+        },
+        {
+          "name": "Witch Hazel Extract",
+          "detail": "Tones and refines the look of pores."
+        },
+        {
+          "name": "Vitamin E",
+          "detail": "Antioxidant nourishment that cushions the skin."
+        }
+      ],
+      "benefits": [
+        "Reduces fine lines & wrinkles",
+        "Promotes skin hydration & elasticity",
+        "Reduces dark spots",
+        "Prevents acne"
+      ],
+      "how_to_use": [
+        "Use at night on clean, dry skin. Start 2–3 nights a week, then increase as tolerated.",
+        "Apply 2–3 drops and pat in, avoiding the eye area.",
+        "Follow with moisturiser. Always wear sunscreen during the day."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "wrinkles",
+        "acne",
+        "dark-spots"
+      ]
+    },
+    {
+      "name": "Dermisque 3X Hair Growth Serum",
+      "slug": "hair-growth-serum",
+      "tagline": "Follicusan, Redensyl & Procapil",
+      "description": "A lightweight scalp serum with three proven hair actives — Follicusan, Redensyl and Procapil — that helps promote hair growth, reduce hair loss and strengthen the hair from the root. Suitable for all hair types.",
+      "price": 3600,
+      "image": "/products/hair-growth.webp",
+      "size": "50 ml / 1.67 fl oz",
+      "featured": true,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "Follicusan",
+          "detail": "Supports the hair follicle's natural growth cycle."
+        },
+        {
+          "name": "Redensyl",
+          "detail": "Targets hair follicle stem cells for denser-looking hair."
+        },
+        {
+          "name": "Procapil",
+          "detail": "Strengthens roots and helps reduce hair fall."
+        }
+      ],
+      "benefits": [
+        "Promotes hair growth",
+        "Reduces hair loss",
+        "Strengthens the hair"
+      ],
+      "how_to_use": [
+        "Apply to a clean, dry scalp, parting hair section by section.",
+        "Use the dropper to apply 1 ml across thinning areas.",
+        "Massage gently for 2–3 minutes. Do not rinse. Use daily."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "hair-loss"
+      ]
+    },
+    {
+      "name": "Dermisque 24 KT Gold Serum",
+      "slug": "24kt-gold-serum",
+      "tagline": "24 KT Gold, Niacinamide 10% & Hyaluronic Acid",
+      "description": "A luxurious face serum with 24 KT Gold dust, Niacinamide 10% and Hyaluronic Acid that brightens the skin, helps fight acne and evens out skin tone for a radiant, golden glow.",
+      "price": 5500,
+      "image": "/products/gold-serum.jpg",
+      "size": "30 ml / 1.01 fl oz",
+      "featured": true,
+      "stock": 120,
+      "ingredients": [
+        {
+          "name": "24 KT Gold",
+          "detail": "Used in the form of gold dust for a luminous finish."
+        },
+        {
+          "name": "Niacinamide 10%",
+          "detail": "Brightens and helps control blemishes."
+        },
+        {
+          "name": "Hyaluronic Acid",
+          "detail": "Hydrates and plumps."
+        }
+      ],
+      "benefits": [
+        "Brightens up the skin",
+        "Fights acne",
+        "Evens the skin tone"
+      ],
+      "how_to_use": [
+        "Cleanse your face and pat dry.",
+        "Dispense 2–3 drops (a pea-sized amount) onto your fingertips.",
+        "Dot over the face and neck, avoiding the eye area, then gently pat in until absorbed.",
+        "Follow with moisturiser. In the morning, always finish with broad-spectrum sunscreen.",
+        "Use consistently, once or twice daily, for best results."
+      ],
+      "faqs": [
+        {
+          "q": "Is it suitable for sensitive skin?",
+          "a": "Our formulas are made for all skin types. If you have sensitive skin, patch-test on your inner arm 24 hours before first use and consult a dermatologist if irritation occurs."
+        },
+        {
+          "q": "When will I see results?",
+          "a": "Most people notice a visible difference in 3–4 weeks of consistent use. Skin renewal takes time — stay consistent."
+        },
+        {
+          "q": "Is Dermisque cruelty-free?",
+          "a": "Yes. Dermisque products are not tested on animals and are manufactured in ISO 9001:2015 and GMP certified facilities."
+        }
+      ],
+      "concerns": [
+        "dull-skin",
+        "acne",
+        "pigmentation"
+      ]
+    }
+  ]
+}

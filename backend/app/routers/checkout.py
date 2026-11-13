@@ -1,0 +1,148 @@
+import re
+import secrets
+import time
+from calendar import monthrange
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select, update
+from sqlalchemy.orm import Session
+
+from ..currency import rates
+from ..database import get_db
+from ..emails import notify
+from ..models import Address, Cart, Coupon, Order, OrderItem, Product, User
+from ..pricing import CouponError, compute_totals, find_valid_coupon
+from ..schemas import CardIn, CheckoutIn, CouponApplied, CouponCheckIn, OrderOut
+from ..security import get_current_user, get_optional_user
+from ..serializers import order_out
+
+router = APIRouter(prefix="/api/checkout", tags=["checkout"])
+
+
+@router.post("/coupon", response_model=CouponApplied)
+def check_coupon(
+    body: CouponCheckIn, user: User | None = Depends(get_optional_user), db: Session = Depends(get_db)
+):
+    try:
+        c = find_valid_coupon(db, body.code, body.subtotal, user.id if user else None)
+    except CouponError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    return CouponApplied.model_validate(c)
+
+
+DECLINES = {"Your card was declined", "This card has expired"}
+
+
+def charge_card(card: CardIn) -> str | None:
+    """Demo payment processor — swap for Stripe/PayPal in production.
+    Card 4000 0000 0000 0002 simulates a decline."""
+    digits = re.sub(r"\D", "", card.number)
+    if not 13 <= len(digits) <= 19:
+        return "Card number looks incomplete"
+    m = re.fullmatch(r"\s*(\d{2})\s*/\s*(\d{2})\s*", card.expiry)
+    if not m:
+        return "Expiry must be MM/YY"
+    mm, yy = int(m.group(1)), 2000 + int(m.group(2))
+    if not 1 <= mm <= 12:
+        return "Expiry month is invalid"
+    if datetime(yy, mm, monthrange(yy, mm)[1], 23, 59) < datetime.now():
+        return "This card has expired"
+    if not re.fullmatch(r"\d{3,4}", card.cvc):
+        return "CVC is invalid"
+    if digits == "4000000000000002":
+        return "Your card was declined"
+    return None
+
+
+def _order_number() -> str:
+    t = format(int(time.time() * 1000), "X")[-5:]
+    return f"DQ-{t}{secrets.token_hex(2).upper()}"
+
+
+@router.post("/orders", response_model=OrderOut, status_code=201)
+def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Merge duplicate lines and re-price everything from the database.
+    qty: dict[str, int] = {}
+    for line in body.items:
+        qty[line.id] = qty.get(line.id, 0) + line.quantity
+
+    products = {
+        p.id: p
+        for p in db.scalars(select(Product).where(Product.id.in_(qty), Product.is_active.is_(True))).all()
+    }
+    lines = []
+    for pid, q in qty.items():
+        p = products.get(pid)
+        if not p:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "A product in your bag is no longer available")
+        if p.stock < q:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Only {p.stock} left of {p.name}")
+        lines.append((p, q))
+    subtotal = sum(p.price * q for p, q in lines)
+
+    coupon: Coupon | None = None
+    if body.coupon:
+        try:
+            coupon = find_valid_coupon(db, body.coupon, subtotal, user.id)
+        except CouponError as e:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    totals = compute_totals(subtotal, coupon)
+
+    if body.payment_method == "CARD":
+        if not body.card:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Card details are required")
+        err = charge_card(body.card)
+        if err:
+            if err in DECLINES:  # a real decline (not a typo) — tell the customer and the store
+                notify.checkout_failed(user, err, lines, body.currency, rates()[body.currency], payment=True)
+            raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, err)
+
+    # Atomic stock decrement guards against overselling under concurrency.
+    stock_before = {p.id: p.stock for p, _ in lines}
+    for p, q in lines:
+        res = db.execute(
+            update(Product).where(Product.id == p.id, Product.stock >= q).values(stock=Product.stock - q)
+        )
+        if res.rowcount == 0:
+            db.rollback()
+            reason = f"{p.name} just sold out"
+            notify.checkout_failed(user, reason, lines, body.currency, rates()[body.currency], payment=False)
+            raise HTTPException(status.HTTP_409_CONFLICT, reason)
+
+    address = body.address.model_dump(by_alias=True, exclude={"is_default", "isDefault"})
+    order = Order(
+        order_number=_order_number(),
+        user_id=user.id,
+        status="PROCESSING" if body.payment_method == "CARD" else "PENDING",
+        payment_method=body.payment_method,
+        payment_status="PAID" if body.payment_method == "CARD" else "UNPAID",
+        coupon_code=coupon.code if coupon else None,
+        currency=body.currency,
+        fx_rate=rates()[body.currency],
+        address=address,
+        notes=body.notes,
+        items=[
+            OrderItem(product_id=p.id, name=p.name, slug=p.slug, image=p.image, price=p.price, quantity=q)
+            for p, q in lines
+        ],
+        **totals,
+    )
+    db.add(order)
+    if coupon:
+        coupon.used_count += 1
+    if body.save_address:
+        has_any = db.scalar(select(Address.id).where(Address.user_id == user.id).limit(1))
+        db.add(
+            Address(
+                user_id=user.id,
+                **body.address.model_dump(exclude={"is_default"}),
+                is_default=not has_any,
+            )
+        )
+    db.execute(Cart.__table__.delete().where(Cart.user_id == user.id))  # bag is now an order
+    db.commit()
+    db.refresh(order)
+    notify.order_placed(order)
+    notify.low_stock(db, list(stock_before), stock_before)
+    return order_out(order)
