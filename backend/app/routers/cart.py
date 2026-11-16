@@ -7,6 +7,7 @@ from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import promo
 from ..database import get_db
 from ..models import Cart, Product, User
 from ..schemas import Ok, Schema
@@ -41,12 +42,19 @@ def get_cart(user: User = Depends(get_current_user), db: Session = Depends(get_d
         return []
     qty = {i["id"]: i["quantity"] for i in cart.items}
     products = db.scalars(select(Product).where(Product.id.in_(qty), Product.is_active.is_(True))).all()
-    return [
-        CartLineOut(id=p.id, slug=p.slug, name=p.name, price=p.price, image=p.image, stock=p.stock,
+    out = [
+        CartLineOut(id=p.id, slug=p.slug, name=p.name, price=promo.unit_price(p), image=p.image, stock=p.stock,
                     quantity=min(qty[p.id], p.stock))
         for p in products
         if p.stock > 0
     ]
+    keys = [k[len(promo.BUNDLE_PREFIX):] for k in qty if promo.is_bundle_id(k)]
+    if keys and promo.is_live():
+        for rb in promo.resolve(db, keys).values():
+            if rb.stock > 0:
+                out.append(CartLineOut(id=rb.id, slug="black-friday", name=rb.name, price=rb.price,
+                                       image=rb.bundle.image, stock=rb.stock, quantity=min(qty[rb.id], rb.stock)))
+    return out
 
 
 @router.put("", response_model=Ok)

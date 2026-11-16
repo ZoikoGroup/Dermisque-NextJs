@@ -5,11 +5,13 @@ in chat without a restart. The text form is deterministic so Claude's prompt cac
 """
 
 import time
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
+from .. import promo
 from ..config import settings
 from ..database import SessionLocal
 from ..models import Coupon, Product, Review
@@ -82,6 +84,19 @@ _cache: tuple[float, Knowledge] | None = None
 TTL = 300
 
 
+def black_friday_facts() -> str:
+    start, end = promo.window()
+    now = datetime.now(timezone.utc)
+    state = ("LIVE NOW — prices below already include the discount" if start <= now <= end
+             else "starts soon" if now < start else "has ended")
+    sets = "; ".join(f"{b.name} ({b.subtitle})" for b in promo.BUNDLES)
+    return (
+        f"BLACK FRIDAY ({start:%d %b} – {end:%d %b %Y}, page /black-friday): {state}. "
+        f"{settings.black_friday_single_pct}% off every serum, {settings.black_friday_combo_pct}% off combos and gift sets "
+        f"({sets}). Discount codes can't be combined with Black Friday prices."
+    )
+
+
 def _money(c: int) -> str:
     return f"${c / 100:,.2f}"
 
@@ -110,7 +125,7 @@ def load() -> Knowledge:
         avg, n = ratings.get(p.id, (None, 0))
         info = ProductInfo(
             id=p.id, slug=p.slug, name=p.name, tagline=p.tagline or "", description=p.description or "",
-            price=p.price, compare_at=p.compare_at_price, image=p.image, size=p.size or "", stock=p.stock,
+            price=promo.unit_price(p), compare_at=promo.compare_price(p), image=p.image, size=p.size or "", stock=p.stock,
             concerns=[c.name for c in p.categories], concern_slugs=[c.slug for c in p.categories],
             ingredients=list(p.ingredients or []), benefits=list(p.benefits or []),
             how_to_use=list(p.how_to_use or []), rating=round(float(avg), 1) if avg else None, reviews=n,
@@ -122,7 +137,7 @@ def load() -> Knowledge:
         ]).lower()
         infos.append(info)
 
-    lines = [STORE_FACTS, "ACTIVE DISCOUNT CODES:"]
+    lines = [STORE_FACTS, black_friday_facts(), "ACTIVE DISCOUNT CODES:"]
     lines += [f"- {c['code']}: {c['description']}{' (first order only)' if c['first_order_only'] else ''}" for c in coupons]
     lines.append(f"\nPRODUCT CATALOGUE ({len(infos)} products; link each as /product/<slug>):")
     for i in infos:

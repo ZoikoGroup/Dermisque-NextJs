@@ -99,7 +99,7 @@ def stats(days: int = Query(30, ge=7, le=365), db: Session = Depends(get_db)):
         products=products,
         avg_order_value=revenue // orders if orders else 0,
         pending_orders=pending,
-        low_stock=[product_card(p) for p in low],
+        low_stock=[product_card(p, storefront=False) for p in low],
         new_messages=new_messages,
         revenue_by_day=series,
         status_breakdown=dict(breakdown),
@@ -114,7 +114,7 @@ def admin_products(q: str | None = None, db: Session = Depends(get_db)):
     stmt = select(Product).options(*_product_load).order_by(Product.created_at.desc())
     if q:
         stmt = stmt.where(Product.name.ilike(f"%{q}%"))
-    return [product_card(p) for p in db.scalars(stmt).all()]
+    return [product_card(p, storefront=False) for p in db.scalars(stmt).all()]
 
 
 @router.get("/products/{product_id}", response_model=ProductDetail)
@@ -122,7 +122,7 @@ def admin_product(product_id: str, db: Session = Depends(get_db)):
     p = db.scalar(select(Product).where(Product.id == product_id).options(*_product_load))
     if not p:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Product not found")
-    return product_detail(p, include_unapproved=True)
+    return product_detail(p, include_unapproved=True, storefront=False)
 
 
 def _apply_product(db: Session, p: Product, body: ProductIn):

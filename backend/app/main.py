@@ -13,7 +13,7 @@ from sqlalchemy import inspect, text
 from .config import settings
 from .database import Base, engine
 from .emails.notify import process_abandoned_carts
-from .routers import account, admin, auth, blog, cart, catalog, chat, checkout, content, emails
+from .routers import account, admin, auth, blog, cart, catalog, chat, checkout, content, emails, promotions
 
 
 @asynccontextmanager
@@ -91,6 +91,7 @@ for r in (
     cart.router,
     chat.router,
     emails.router,
+    promotions.router,
 ):
     app.include_router(r)
 

@@ -5,6 +5,8 @@ Used when no Anthropic API key is configured, and as the fallback if the AI call
 
 import re
 
+from .. import promo
+from ..config import settings
 from .knowledge import Knowledge, ProductInfo
 
 # concern keyword → category slug
@@ -114,7 +116,19 @@ def answer(kb: Knowledge, message: str, user: dict | None) -> tuple[str, list[Pr
     if _has(t, "shipping", "ship", "delivery", "deliver", "how long", "days", "free shipping", "courier"):
         parts.append("🚚 **Shipping:** free on orders over **$15** (a flat $4.99 below that). Delivery usually takes "
                      "**2–7 days** after dispatch, and we email you a tracking number when it ships.")
-    if _has(t, "coupon", "discount", "code", "offer", "offers", "promo", "sale", "deal", "cheaper"):
+    if _has(t, "black friday", "cyber monday", "blackfriday", "combo", "combos", "bundle", "bundles", "gift set",
+            "gift sets", "sale", "deal", "deals"):
+        start, end = promo.window()
+        when = f"{start:%d}–{end:%d %B}"
+        lead = ("🖤 **Black Friday is live!**" if promo.is_live() else f"🖤 **Black Friday runs {when}.**")
+        parts.append(f"{lead} **{settings.black_friday_single_pct}% off every serum** and "
+                     f"**{settings.black_friday_combo_pct}% off combos & gift sets** — prices already include the "
+                     f"discount (codes can't be combined). [See the Black Friday edit](/black-friday)")
+    elif _has(t, "coupon", "discount", "code", "offer", "offers", "promo", "cheaper"):
+        if promo.is_live():
+            parts.append("Discount codes are paused while **Black Friday** prices are live — every serum is already "
+                         f"{settings.black_friday_single_pct}% off. [Shop the sale](/black-friday)")
+    if not promo.is_live() and _has(t, "coupon", "discount", "code", "offer", "offers", "promo", "cheaper"):
         codes = "\n".join(f"- **{c['code']}** — {c['description']}" for c in kb.coupons) or "- **NEW30** — 30% off your first order"
         parts.append(f"🎁 Current codes:\n{codes}\n\nEnter the code in your bag or at checkout.")
     if _has(t, "payment", "pay", "cod", "cash on delivery", "card", "visa", "mastercard", "amex", "paypal"):

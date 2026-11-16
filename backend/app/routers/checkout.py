@@ -1,4 +1,5 @@
 import re
+from dataclasses import dataclass
 import secrets
 import time
 from calendar import monthrange
@@ -8,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from .. import promo
 from ..currency import rates
 from ..database import get_db
 from ..emails import notify
@@ -55,6 +57,16 @@ def charge_card(card: CardIn) -> str | None:
     return None
 
 
+@dataclass
+class PricedLine:
+    product_id: str | None
+    bundle_key: str | None
+    name: str
+    slug: str | None
+    image: str
+    price: int  # unit price charged, USD cents
+
+
 def _order_number() -> str:
     t = format(int(time.time() * 1000), "X")[-5:]
     return f"DQ-{t}{secrets.token_hex(2).upper()}"
@@ -62,24 +74,44 @@ def _order_number() -> str:
 
 @router.post("/orders", response_model=OrderOut, status_code=201)
 def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Merge duplicate lines and re-price everything from the database.
+    # Merge duplicate lines and re-price everything from the database (incl. live campaign prices).
     qty: dict[str, int] = {}
     for line in body.items:
         qty[line.id] = qty.get(line.id, 0) + line.quantity
+    bundle_qty = {k[len(promo.BUNDLE_PREFIX):]: q for k, q in qty.items() if promo.is_bundle_id(k)}
+    prod_qty = {k: q for k, q in qty.items() if not promo.is_bundle_id(k)}
 
     products = {
         p.id: p
-        for p in db.scalars(select(Product).where(Product.id.in_(qty), Product.is_active.is_(True))).all()
+        for p in db.scalars(select(Product).where(Product.id.in_(prod_qty), Product.is_active.is_(True))).all()
     }
-    lines = []
-    for pid, q in qty.items():
+    bundles = promo.resolve(db, list(bundle_qty)) if bundle_qty else {}
+    need: dict[str, int] = {}  # product id -> units to take from stock
+    by_id: dict[str, Product] = {}
+    priced: list[tuple[PricedLine, int]] = []  # what the customer sees on the receipt
+    for pid, q in prod_qty.items():
         p = products.get(pid)
         if not p:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "A product in your bag is no longer available")
+        need[p.id] = need.get(p.id, 0) + q
+        by_id[p.id] = p
+        priced.append((PricedLine(p.id, None, p.name, p.slug, p.image, promo.unit_price(p)), q))
+    for key, q in bundle_qty.items():
+        rb = bundles.get(key)
+        if not rb or not rb.complete:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "A Black Friday set in your bag is no longer available")
+        if not promo.is_live():
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{rb.bundle.name} is only available during Black Friday")
+        for p in rb.products:
+            need[p.id] = need.get(p.id, 0) + q
+            by_id[p.id] = p
+        priced.append((PricedLine(None, rb.bundle.key, rb.name, None, rb.bundle.image, rb.price), q))
+    for pid, q in need.items():
+        p = by_id[pid]
         if p.stock < q:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Only {p.stock} left of {p.name}")
-        lines.append((p, q))
-    subtotal = sum(p.price * q for p, q in lines)
+    lines = priced
+    subtotal = sum(line.price * q for line, q in lines)
 
     coupon: Coupon | None = None
     if body.coupon:
@@ -99,8 +131,9 @@ def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Se
             raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, err)
 
     # Atomic stock decrement guards against overselling under concurrency.
-    stock_before = {p.id: p.stock for p, _ in lines}
-    for p, q in lines:
+    stock_before = {pid: by_id[pid].stock for pid in need}
+    for pid, q in need.items():
+        p = by_id[pid]
         res = db.execute(
             update(Product).where(Product.id == p.id, Product.stock >= q).values(stock=Product.stock - q)
         )
@@ -123,8 +156,9 @@ def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Se
         address=address,
         notes=body.notes,
         items=[
-            OrderItem(product_id=p.id, name=p.name, slug=p.slug, image=p.image, price=p.price, quantity=q)
-            for p, q in lines
+            OrderItem(product_id=line.product_id, name=line.name, slug=line.slug, image=line.image,
+                      price=line.price, quantity=q)
+            for line, q in lines
         ],
         **totals,
     )

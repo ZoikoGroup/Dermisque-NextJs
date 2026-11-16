@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from .. import promo
 from ..config import settings
 from ..database import SessionLocal
 from ..models import Cart, Coupon, Order, Product, Review, User
@@ -52,7 +53,8 @@ def order_snapshot(o: Order) -> dict:
 
 
 def lines_snapshot(lines: list[tuple[Product, int]]) -> list[dict]:
-    return [{"name": p.name, "slug": p.slug, "image": p.image, "price": p.price, "quantity": q} for p, q in lines]
+    return [{"name": p.name, "slug": p.slug, "image": p.image,
+             "price": promo.unit_price(p) if isinstance(p, Product) else p.price, "quantity": q} for p, q in lines]
 
 
 # ───────────── triggers ─────────────
@@ -175,7 +177,7 @@ def process_abandoned_carts() -> int:
             if not claimed or not user or not user.is_active or user.role == "ADMIN" or not lines:
                 continue
             d = {"name": user.name, "email": user.email, "items": lines_snapshot(lines), "step": step,
-                 "subtotal": sum(p.price * q for p, q in lines), "currency": "USD", "fx_rate": 1.0,
+                 "subtotal": sum(promo.unit_price(p) * q for p, q in lines), "currency": "USD", "fx_rate": 1.0,
                  "review": _real_review(db, [p.id for p, _ in lines])}
             if step >= 1 and (offer := _reminder_coupon(db, user.id)):
                 d["coupon"], d["coupon_label"], d["coupon_note"] = offer

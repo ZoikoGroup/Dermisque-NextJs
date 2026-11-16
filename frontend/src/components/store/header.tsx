@@ -27,9 +27,10 @@ import { cn } from "@/lib/utils";
 
 type SessionLite = { name: string; role: "USER" | "ADMIN" } | null;
 
-const nav = [
+const nav: { href: string; label: string; mega?: boolean; hot?: boolean }[] = [
   { href: "/", label: "Home" },
   { href: "/shop", label: "All Products" },
+  { href: "/black-friday", label: "Black Friday", hot: true },
   { href: "#concern", label: "Shop by Concern", mega: true },
   { href: "/about", label: "About" },
   { href: "/blog", label: "Blog" },
@@ -112,9 +113,18 @@ export function Header({ session }: { session: SessionLite }) {
                   key={item.href}
                   href={item.href}
                   onMouseEnter={() => setMega(false)}
-                  className="link-underline text-[0.82rem] font-medium tracking-wide"
+                  className={cn(
+                    "link-underline text-[0.82rem] font-medium tracking-wide",
+                    item.hot && "relative flex items-center gap-1.5 font-semibold text-[#e11d2e]",
+                  )}
                   data-active={item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)}
                 >
+                  {item.hot && (
+                    <span className="relative flex size-1.5">
+                      <span className="absolute inset-0 animate-ping rounded-full bg-[#e11d2e]/70" />
+                      <span className="relative size-1.5 rounded-full bg-[#e11d2e]" />
+                    </span>
+                  )}
                   {item.label}
                 </Link>
               ),

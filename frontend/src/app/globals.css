@@ -278,3 +278,22 @@ body {
 .dq-article > :first-child { margin-top: 0; }
 .dq-article.compact { font-size: 1rem; }
 .dq-article.compact h2 { font-size: 1.6rem; }
+
+/* ───────────── Black Friday campaign ───────────── */
+@keyframes bf-sway {
+  0%, 100% { transform: rotate(0deg) scaleY(1); }
+  50% { transform: rotate(1.5deg) scaleY(1.04); }
+}
+@keyframes bf-rise {
+  from { opacity: 0; transform: translateY(18px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes bf-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.bf-rise { animation: bf-rise 0.9s var(--ease-luxe) both; }
+.bf-float { animation: bf-float 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .bf-rise, .bf-float { animation: none; }
+}

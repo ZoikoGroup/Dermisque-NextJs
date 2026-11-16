@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from . import promo
 from .config import settings
 from .models import Coupon, Order
 
@@ -31,6 +32,8 @@ def compute_totals(subtotal: int, coupon: Coupon | None = None) -> dict:
 
 
 def find_valid_coupon(db: Session, code: str, subtotal: int, user_id: str | None) -> Coupon:
+    if promo.is_live():
+        raise CouponError("Codes can't be combined with Black Friday prices — your sale discount is already applied")
     coupon = db.scalar(select(Coupon).where(Coupon.code == code.strip().upper()))
     if not coupon or not coupon.active:
         raise CouponError("This code isn't valid")

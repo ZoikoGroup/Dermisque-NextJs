@@ -1,5 +1,6 @@
 import "server-only";
 import { api, apiOrNull } from "./api";
+import type { BlackFriday } from "./black-friday";
 import type { Category, ProductCardData, ProductDetail } from "./types";
 
 export type { ProductCardData } from "./types";
@@ -33,4 +34,8 @@ export function getRelatedProducts(slug: string, limit = 4) {
     query: { limit },
     auth: false,
   });
+}
+
+export function getBlackFriday() {
+  return api<BlackFriday>("/api/promotions/black-friday", { auth: false });
 }

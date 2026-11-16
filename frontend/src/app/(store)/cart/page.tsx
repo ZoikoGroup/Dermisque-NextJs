@@ -8,6 +8,7 @@ import { ArrowRight, ShoppingBag, Trash2 } from "lucide-react";
 import { QtyStepper } from "@/components/store/cart-drawer";
 import { ButtonLink } from "@/components/ui/button";
 import { useMounted } from "@/hooks/use-mounted";
+import { cartItemHref } from "@/lib/black-friday";
 import { computeTotals } from "@/lib/pricing";
 import { site } from "@/lib/site";
 import { cartSubtotal, useCart } from "@/store/cart";
@@ -62,12 +63,12 @@ export default function CartPage() {
                 exit={{ opacity: 0, x: -40 }}
                 className="flex gap-5 rounded-3xl bg-white p-4"
               >
-                <Link href={`/product/${item.slug}`} className="group relative size-28 shrink-0 overflow-hidden rounded-2xl bg-sand">
+                <Link href={cartItemHref(item)} className="group relative size-28 shrink-0 overflow-hidden rounded-2xl bg-sand">
                   <Image src={item.image} alt={item.name} fill sizes="112px" className="object-cover transition-transform duration-700 group-hover:scale-110" />
                 </Link>
                 <div className="flex flex-1 flex-col">
                   <div className="flex justify-between gap-4">
-                    <Link href={`/product/${item.slug}`} className="font-display text-lg leading-snug hover:underline">
+                    <Link href={cartItemHref(item)} className="font-display text-lg leading-snug hover:underline">
                       {item.name}
                     </Link>
                     <span className="font-semibold">{formatPrice(item.price * item.quantity)}</span>

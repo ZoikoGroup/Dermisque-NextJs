@@ -22,7 +22,8 @@ import { SectionHeading } from "@/components/ui/misc";
 import { Reveal, Stagger, StaggerItem } from "@/components/ui/reveal";
 import { BlogCard } from "@/components/blog/blog-card";
 import { getBlogPosts } from "@/lib/blog";
-import { getCategories, getFeaturedProducts } from "@/lib/queries";
+import { getBlackFriday, getCategories, getFeaturedProducts } from "@/lib/queries";
+import { BlackFridayPopup } from "@/components/black-friday/popup";
 
 const concernImages: Record<string, string> = {
   "dull-skin": "/products/vitamin-c.webp",
@@ -45,14 +46,26 @@ const trust = [
 ];
 
 export default async function HomePage() {
-  const [featured, categories, journal] = await Promise.all([
+  const [featured, categories, journal, blackFriday] = await Promise.all([
     getFeaturedProducts(8),
     getCategories(),
     getBlogPosts({ pageSize: 3 }).catch(() => null),
+    getBlackFriday().catch(() => null),
   ]);
 
   return (
     <>
+      {blackFriday && (
+        <BlackFridayPopup
+          campaign={{
+            live: blackFriday.live,
+            startsAt: blackFriday.startsAt,
+            endsAt: blackFriday.endsAt,
+            singlePct: blackFriday.singlePct,
+            comboPct: blackFriday.comboPct,
+          }}
+        />
+      )}
       <Hero />
 
       {/* Trust strip */}

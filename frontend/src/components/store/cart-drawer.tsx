@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useCart, cartSubtotal, cartCount } from "@/store/cart";
 import { ButtonLink } from "@/components/ui/button";
+import { cartItemHref } from "@/lib/black-friday";
 import { site } from "@/lib/site";
 
 export function CartDrawer() {
@@ -112,7 +113,7 @@ export function CartDrawer() {
                         className="flex gap-4 rounded-2xl bg-white p-3"
                       >
                         <Link
-                          href={`/product/${item.slug}`}
+                          href={cartItemHref(item)}
                           onClick={() => setOpen(false)}
                           className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-sand"
                         >

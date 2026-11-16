@@ -1,3 +1,4 @@
+from . import promo
 from .models import Order, Product, Review
 from .schemas import (
     CategoryRef,
@@ -15,15 +16,16 @@ def _ratings(p: Product) -> tuple[float, int]:
     return (sum(vals) / len(vals), len(vals)) if vals else (0.0, 0)
 
 
-def product_card(p: Product) -> ProductCard:
+def product_card(p: Product, storefront: bool = True) -> ProductCard:
+    """storefront=True applies live campaign pricing; admin screens pass False to edit stored prices."""
     rating, count = _ratings(p)
     return ProductCard(
         id=p.id,
         slug=p.slug,
         name=p.name,
         tagline=p.tagline,
-        price=p.price,
-        compare_at_price=p.compare_at_price,
+        price=promo.unit_price(p) if storefront else p.price,
+        compare_at_price=promo.compare_price(p) if storefront else p.compare_at_price,
         image=p.image,
         stock=p.stock,
         featured=p.featured,
@@ -46,8 +48,8 @@ def review_out(r: Review) -> ReviewOut:
     )
 
 
-def product_detail(p: Product, include_unapproved: bool = False) -> ProductDetail:
-    card = product_card(p)
+def product_detail(p: Product, include_unapproved: bool = False, storefront: bool = True) -> ProductDetail:
+    card = product_card(p, storefront)
     reviews = sorted(
         (r for r in p.reviews if include_unapproved or r.approved),
         key=lambda r: r.created_at,
