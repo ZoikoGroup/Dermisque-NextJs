@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from .. import promo
 from ..config import settings
 from ..database import SessionLocal
-from ..models import Cart, Coupon, Order, Product, Review, User
+from ..models import Cart, Order, Product, Review, User
 from . import templates as t
 from .sender import send, send_many
 
@@ -40,7 +40,6 @@ def order_snapshot(o: Order) -> dict:
         "subtotal": o.subtotal, "discount": o.discount, "shipping": o.shipping, "tax": o.tax, "total": o.total,
         "currency": o.currency or "USD",
         "fx_rate": o.fx_rate or 1.0,
-        "coupon_code": o.coupon_code,
         "address": o.address or {},
         "notes": o.notes,
         "tracking": o.tracking_number,
@@ -126,17 +125,6 @@ def password_changed(user: User):
 
 
 # ───────────── abandoned carts ─────────────
-def _reminder_coupon(db: Session, user_id: str) -> tuple[str, str, str] | None:
-    """Second reminder offers NEW30 to first-time buyers, DERMISQUE to returning ones (if active)."""
-    has_orders = db.scalar(select(Order.id).where(Order.user_id == user_id).limit(1))
-    code = "DERMISQUE" if has_orders else "NEW30"
-    c = db.scalar(select(Coupon).where(Coupon.code == code, Coupon.active.is_(True)))
-    if not c:
-        return None
-    label = f"{c.value}% off" if c.type == "PERCENT" else "money off"
-    return c.code, label, c.description or f"{label} — enter it at checkout."
-
-
 def _real_review(db: Session, product_ids: list[str]) -> dict | None:
     """A genuine approved 4-5 star review, preferring products in the bag."""
     base = (select(Review).where(Review.approved.is_(True), Review.rating >= 4)
@@ -179,8 +167,6 @@ def process_abandoned_carts() -> int:
             d = {"name": user.name, "email": user.email, "items": lines_snapshot(lines), "step": step,
                  "subtotal": sum(promo.unit_price(p) * q for p, q in lines), "currency": "USD", "fx_rate": 1.0,
                  "review": _real_review(db, [p.id for p, _ in lines])}
-            if step >= 1 and (offer := _reminder_coupon(db, user.id)):
-                d["coupon"], d["coupon_label"], d["coupon_note"] = offer
             try:
                 send(t.cart_reminder(d))
                 sent += 1
@@ -200,7 +186,7 @@ def _sample_order(status="PROCESSING", payment="CARD", pay_status="PAID") -> dic
     return {
         "number": "DQ-SAMPLE01", "status": status, "payment_method": payment, "payment_status": pay_status,
         "subtotal": sub, "discount": round(sub * 0.25), "shipping": 0, "tax": 0, "total": sub - round(sub * 0.25),
-        "currency": "USD", "fx_rate": 1.0, "coupon_code": "DERMISQUE",
+        "currency": "USD", "fx_rate": 1.0,
         "address": {"fullName": "Ava Thompson", "line1": "1401 21st Street", "line2": "Suite R", "city": "Sacramento",
                     "state": "CA", "postalCode": "95811", "country": "United States", "phone": "+1 555 0100"},
         "notes": "Please leave the parcel at the front desk.", "tracking": "1Z 999 AA1 0123 4567",
@@ -224,8 +210,6 @@ def _sample_fail():
 def _sample_cart(step: int):
     with SessionLocal() as db:
         d = _sample_fail() | {"step": step, "review": _real_review(db, [])}
-    if step:
-        d |= {"coupon": "NEW30", "coupon_label": "30% off", "coupon_note": "30% off your first order — valid on this bag."}
     return d
 
 
@@ -245,7 +229,7 @@ PREVIEWS: dict[str, tuple[str, str, object]] = {
                         lambda i: t.order_cancelled(_sample_order("CANCELLED", pay_status="REFUNDED"), inline=i)),
     "order_refunded": ("Refund issued", "Customer", lambda i: t.order_refunded(_sample_order(pay_status="REFUNDED"), inline=i)),
     "cart_reminder_1": ("Abandoned cart — 1st reminder", "Customer", lambda i: t.cart_reminder(_sample_cart(0), inline=i)),
-    "cart_reminder_2": ("Abandoned cart — 2nd reminder + coupon", "Customer", lambda i: t.cart_reminder(_sample_cart(1), inline=i)),
+    "cart_reminder_2": ("Abandoned cart — 2nd reminder", "Customer", lambda i: t.cart_reminder(_sample_cart(1), inline=i)),
     "password_reset": ("Password reset", "Customer",
                        lambda i: t.password_reset("Ava Thompson", "ava@example.com", f"{settings.site_url}/reset-password?token=sample", inline=i)),
     "password_changed": ("Password changed", "Customer", lambda i: t.password_changed("Ava Thompson", "ava@example.com", inline=i)),

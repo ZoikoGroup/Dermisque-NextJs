@@ -230,15 +230,6 @@ color:{dot_fg};font:600 13px/32px {SANS};text-align:center">{mark}</div></td>
     return f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>{"".join(cells)}</tr></table>'
 
 
-def coupon(code: str, headline: str, note: str = "") -> str:
-    return f"""<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-style="border:2px dashed {SUN};border-radius:20px;background:#fff7ee"><tr><td align="center" style="padding:26px 20px">
-<p style="margin:0;font:600 11px/1.4 {SANS};letter-spacing:3px;text-transform:uppercase;color:{SUN}">{e(headline)}</p>
-<p style="margin:10px 0 0;font:400 34px/1 {SERIF};letter-spacing:6px;color:{INK}">{e(code)}</p>
-{f'<p style="margin:10px 0 0;font:400 13px/1.5 {SANS};color:{SOFT}">{e(note)}</p>' if note else ''}
-</td></tr></table>"""
-
-
 def notice(html: str, tone: str = "warn") -> str:
     bg, fg, bar = {
         "warn": ("#fff4e5", "#7a4a00", AMBER),

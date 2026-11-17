@@ -7,7 +7,7 @@ from datetime import datetime
 
 from ..config import settings
 from .layout import (
-    INK, LINE, MUTE, SANS, SERIF, SOFT, SUN, Ctx, address_block, button, card, coupon, e, eyebrow,
+    INK, LINE, MUTE, SANS, SERIF, SOFT, SUN, Ctx, address_block, button, card, e, eyebrow,
     gap, h1, h2, items_table, kv, money, notice, p, page, row, spacer, to_text, tracker,
 )
 from .sender import Email
@@ -38,7 +38,7 @@ def _order_totals(o: dict) -> str:
     f = _fmt(o)
     rows = [("Subtotal", e(f(o["subtotal"])))]
     if o.get("discount"):
-        rows.append((f"Discount{' (' + o['coupon_code'] + ')' if o.get('coupon_code') else ''}",
+        rows.append(("Discount",
                      f'<span style="color:#15803d">&minus;{e(f(o["discount"]))}</span>'))
     rows.append(("Shipping", "Free" if not o.get("shipping") else e(f(o["shipping"]))))
     if o.get("tax"):
@@ -74,14 +74,12 @@ def welcome(name: str, to: str, *, inline=True) -> Email:
                     "triple-action formula for glowing, healthy, younger-looking skin and fuller hair.")
                 + button("Explore the collection", "/shop"))
             + spacer(30)
-            + row(coupon("NEW30", "A welcome gift for you", "30% off your first order — enter it at checkout."))
-            + spacer(30)
             + row(h2("Not sure where to start?")
                   + p("Tell us about your skin and our experts will build a 3X routine around it — completely free.")
                   + button("Book a free consultation", "/consultation", brand=True))
         )
     return _email("welcome", to, "Welcome to Dermisque — your glow starts here ✨",
-                  "Your 30% welcome gift is inside.", body, inline=inline)
+                  "Triple-action serums for glowing, healthy skin.", body, inline=inline)
 
 
 def newsletter_welcome(to: str, *, inline=True) -> Email:
@@ -91,8 +89,6 @@ def newsletter_welcome(to: str, *, inline=True) -> Email:
                 + p("Expect skin science made simple: new launches, ingredient deep-dives, routines that work, and "
                     "subscriber-only offers — never spam.")
                 + button("Read the journal", "/blog"))
-            + spacer(30)
-            + row(coupon("NEW30", "Your subscriber welcome", "30% off your first order."))
         )
     return _email("newsletter_welcome", to, "You're in! Welcome to the Dermisque circle",
                   "Skin science, launches and subscriber-only offers.", body, inline=inline)
@@ -274,7 +270,7 @@ def order_refunded(o: dict, *, inline=True) -> Email:
 
 
 def cart_reminder(d: dict, *, inline=True) -> Email:
-    """d: name, email, items, subtotal, step (0-based), coupon (optional code), coupon_note"""
+    """d: name, email, items, subtotal, step (0-based), review (optional)"""
     f = _fmt(d)
     first, step = _first(d["name"]), d["step"]
 
@@ -286,19 +282,17 @@ def cart_reminder(d: dict, *, inline=True) -> Email:
                          "visible results — complete your order in one click."))
         else:
             intro = (eyebrow("Still thinking it over?")
-                     + h1("A little something", "to help you decide.")
+                     + h1("Your bag is", "still saved.")
                      + p("Great skin is a habit, not a hurry — but we'd hate for you to miss out. "
-                         "Here's a thank-you for considering Dermisque."))
+                         "Your picks are waiting whenever you're ready."))
         # A genuine approved customer review (never invented); left out when none is available.
         rv = d.get("review")
         review = (spacer(26) + row(card(
             f'<p style="margin:0;font:italic 400 19px/1.5 {SERIF};color:{INK}">&ldquo;{e(rv["body"])}&rdquo;</p>'
             f'<p style="margin:12px 0 0;font:500 12px/1.4 {SANS};letter-spacing:2px;text-transform:uppercase;color:{SUN}">'
             f'{"★" * rv["rating"]} &nbsp;{e(rv["name"])} &middot; {e(rv["product"])}</p>', bg="#fffaf2")) if rv else "")
-        offer = (spacer(26) + row(coupon(d["coupon"], "Exclusive for you", d.get("coupon_note", ""))) if d.get("coupon") else "")
         return (
             row(intro + button("Complete my order", "/checkout", brand=True))
-            + offer
             + spacer(30)
             + row(h2("In your bag") + items_table(ctx, d["items"], f)
                   + kv([("Subtotal", e(f(d["subtotal"])))], strong_last=True))
@@ -307,8 +301,7 @@ def cart_reminder(d: dict, *, inline=True) -> Email:
             + row(p("Questions about which serum suits your skin? Just reply to this email — a real person will answer.", 13, MUTE))
         )
     subject = (f"{first}, you left something beautiful behind ✨" if step == 0
-               else (f"Still thinking? Here's {d.get('coupon_label', 'a gift')} on your bag" if d.get("coupon")
-                     else "Your bag is about to expire"))
+               else "Your bag is about to expire")
     return _email(f"cart_reminder_{step + 1}", d["email"], subject,
                   "Your bag is saved — complete your order in one click.", body, inline=inline)
 
