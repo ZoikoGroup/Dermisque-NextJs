@@ -1,27 +1,32 @@
-import { FreeShippingText } from "./currency-provider";
-
 const messages = [
-  "30% off your first order — use code NEW30",
-  "Free shipping on orders over {amount}",
-  "Delivery in 2–7 days",
-  "Cruelty-free · ISO 9001:2015 · GMP certified",
-  "25% off your second order — code DERMISQUE",
-  "Free skin consultation with our experts",
+  "30% off your first order · code NEW30",
+  "Complimentary skin consultation",
+  "Discover triple-action serums",
 ];
 
+const Dot = () => <span className="size-1.5 shrink-0 rounded-full bg-[#d9b46a]" />;
+
 export function Announcement() {
-  const row = [...messages, ...messages];
   return (
-    <div className="relative overflow-hidden bg-ink py-2.5 text-[0.72rem] font-medium uppercase tracking-[0.22em] text-white">
-      <div className="flex w-max animate-marquee gap-12 hover:[animation-play-state:paused]">
-        {row.map((m, i) => (
-          <span key={i} className="flex items-center gap-12 whitespace-nowrap">
-            {m.includes("{amount}") ? <FreeShippingText template={m} /> : m}
-            <span className="text-brand text-base leading-none">Σ</span>
+    <div className="relative overflow-hidden bg-[#0f3d35] py-2 text-[0.7rem] font-medium uppercase tracking-[0.04em] text-white sm:text-[0.76rem]">
+      {/* desktop: three messages spread across the bar */}
+      <div className="mx-auto w-full max-w-[112rem] px-4 sm:px-6 lg:px-10 2xl:px-[4.5rem] hidden items-center justify-between gap-6 lg:flex">
+        {messages.map((m, i) => (
+          <div key={m} className="contents">
+            {i > 0 && <Dot />}
+            <span className="whitespace-nowrap">{m}</span>
+          </div>
+        ))}
+      </div>
+      {/* smaller screens: a slow ticker */}
+      <div className="flex w-max animate-marquee gap-10 lg:hidden">
+        {[...messages, ...messages, ...messages, ...messages].map((m, i) => (
+          <span key={i} className="flex items-center gap-10 whitespace-nowrap">
+            {m}
+            <Dot />
           </span>
         ))}
       </div>
-      <div className="absolute inset-x-0 bottom-0 h-[2px] bg-brand" />
     </div>
   );
 }

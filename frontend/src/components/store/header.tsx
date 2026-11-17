@@ -66,17 +66,17 @@ export function Header({ session }: { session: SessionLite }) {
     <>
       <header
         className={cn(
-          "sticky top-0 z-40 transition-all duration-500",
+          "sticky top-0 z-40 border-b transition-all duration-500",
           scrolled
-            ? "border-b border-line/80 bg-cream/80 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.25)] backdrop-blur-xl"
-            : "bg-cream",
+            ? "border-line/80 bg-white/85 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.25)] backdrop-blur-xl"
+            : "border-line bg-white",
         )}
         onMouseLeave={() => setMega(false)}
       >
         <div
           className={cn(
-            "container-luxe flex items-center justify-between gap-6 transition-all duration-500",
-            scrolled ? "h-16" : "h-20",
+            "mx-auto w-full max-w-[112rem] px-4 sm:px-6 lg:px-10 2xl:px-[4.5rem] flex items-center justify-between gap-6 transition-all duration-500",
+            scrolled ? "h-[4.25rem]" : "h-[5.25rem]",
           )}
         >
           <button
@@ -88,51 +88,48 @@ export function Header({ session }: { session: SessionLite }) {
           </button>
 
           <Logo
-            className={cn("transition-all duration-500", scrolled ? "w-36 sm:w-40" : "w-40 sm:w-48")}
+            className={cn("transition-all duration-500", scrolled ? "w-36 sm:w-44" : "w-40 sm:w-48 xl:w-56")}
           />
 
-          <nav className="hidden items-center gap-7 lg:flex">
-            {nav.map((item) =>
-              item.mega ? (
+          <nav className="hidden items-center gap-5 lg:flex xl:gap-9">
+            {nav.map((item) => {
+              const active = item.mega ? mega : item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const cls = cn(
+                "group relative flex items-center gap-1 whitespace-nowrap py-2 text-[0.92rem] text-ink transition-colors hover:text-[#0f3d35] xl:text-[1.05rem]",
+                item.hot && "font-semibold text-[#9b1c2c]",
+              );
+              const bar = (
+                <span
+                  className={cn(
+                    "absolute -bottom-1.5 left-0 h-[3px] w-full origin-left rounded-full bg-[#b8955a] transition-transform duration-300",
+                    active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100",
+                  )}
+                />
+              );
+              return item.mega ? (
                 <button
                   key={item.label}
                   onMouseEnter={() => setMega(true)}
                   onClick={() => setMega((v) => !v)}
-                  className="link-underline flex items-center gap-1 text-[0.82rem] font-medium tracking-wide"
-                  data-active={mega}
+                  className={cls}
                   aria-expanded={mega}
                 >
                   {item.label}
-                  <ChevronDown
-                    className={cn("size-3.5 transition-transform duration-300", mega && "rotate-180")}
-                  />
+                  <ChevronDown className={cn("size-3.5 transition-transform duration-300", mega && "rotate-180")} />
+                  {bar}
                 </button>
               ) : (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onMouseEnter={() => setMega(false)}
-                  className={cn(
-                    "link-underline text-[0.82rem] font-medium tracking-wide",
-                    item.hot && "relative flex items-center gap-1.5 font-semibold text-[#e11d2e]",
-                  )}
-                  data-active={item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)}
-                >
-                  {item.hot && (
-                    <span className="relative flex size-1.5">
-                      <span className="absolute inset-0 animate-ping rounded-full bg-[#e11d2e]/70" />
-                      <span className="relative size-1.5 rounded-full bg-[#e11d2e]" />
-                    </span>
-                  )}
+                <Link key={item.href} href={item.href} onMouseEnter={() => setMega(false)} className={cls}>
                   {item.label}
+                  {bar}
                 </Link>
-              ),
-            )}
+              );
+            })}
           </nav>
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 xl:gap-3">
             <IconBtn label="Search" onClick={() => setSearch(true)}>
-              <Search className="size-[1.15rem]" />
+              <Search className="size-[1.35rem]" strokeWidth={1.6} />
             </IconBtn>
             <WishlistIcon />
             <div className="relative hidden sm:block">
@@ -141,7 +138,7 @@ export function Header({ session }: { session: SessionLite }) {
                 onClick={() => setUserMenu((v) => !v)}
                 onBlur={() => setTimeout(() => setUserMenu(false), 150)}
               >
-                <User className="size-[1.15rem]" />
+                <User className="size-[1.35rem]" strokeWidth={1.6} />
               </IconBtn>
               <AnimatePresence>
                 {userMenu && (
@@ -315,7 +312,7 @@ function CartButton() {
   const setOpen = useCart((s) => s.setOpen);
   return (
     <IconBtn label="Open cart" onClick={() => setOpen(true)}>
-      <ShoppingBag className="size-[1.15rem]" />
+      <ShoppingBag className="size-[1.35rem]" strokeWidth={1.6} />
       {mounted && <CountBadge count={cartCount(items)} bump={bump} />}
     </IconBtn>
   );
@@ -330,7 +327,7 @@ function WishlistIcon() {
       aria-label="Wishlist"
       className="relative hidden size-10 place-items-center rounded-full transition-all duration-300 hover:bg-ink hover:text-white sm:grid"
     >
-      <Heart className="size-[1.15rem]" />
+      <Heart className="size-[1.35rem]" strokeWidth={1.6} />
       {mounted && <CountBadge count={count} />}
     </Link>
   );
