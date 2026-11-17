@@ -76,15 +76,22 @@ jobs:
             fi
             sudo systemctl restart dermisque-api'
 
-      - name: Wait for the API to be healthy
+      # Checked from inside the VM, so a CDN or firewall that blocks GitHub's servers can never fake an outage.
+      - name: Verify the API on the VM
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
         run: |
-          for _ in $(seq 1 20); do
-            if curl -fsS https://api.dermisque.com/api/health | grep -q '"ok"'; then
-              echo "API healthy"; exit 0
-            fi
-            sleep 3
-          done
-          echo "API did not become healthy: check journalctl -u dermisque-api on the VM"; exit 1
+          ssh "$VM_USER@$VM_HOST" 'set -e
+            ok=0
+            for i in $(seq 1 20); do
+              if curl -fsS -o /dev/null http://127.0.0.1:8000/api/health; then ok=1; break; fi
+              sleep 3
+            done
+            [ "$ok" = 1 ] || { echo "API did not become healthy: see journalctl -u dermisque-api on the VM"; exit 1; }
+            echo "API is healthy on the VM"
+            curl -fsS -o /dev/null --resolve api.dermisque.com:443:127.0.0.1 https://api.dermisque.com/api/health
+            echo "nginx and HTTPS for api.dermisque.com are healthy"'
 
   frontend:
     name: Storefront
@@ -143,11 +150,26 @@ jobs:
             pm2 restart dermisque-web --update-env
             pm2 save'
 
-      - name: Health check
+      - name: Verify the storefront on the VM
         env:
           VM_HOST: ${{ secrets.VM_HOST }}
           VM_USER: ${{ secrets.VM_USER }}
         run: |
-          sleep 8
-          ssh "$VM_USER@$VM_HOST" 'curl -fsI http://localhost:3100 | head -1'
-          curl -fsS -o /dev/null -w "www.dermisque.com -> %{http_code}\n" https://www.dermisque.com/
+          ssh "$VM_USER@$VM_HOST" 'set -e
+            ok=0
+            for i in $(seq 1 20); do
+              if curl -fsS -o /dev/null http://127.0.0.1:3100/; then ok=1; break; fi
+              sleep 3
+            done
+            [ "$ok" = 1 ] || { echo "Storefront did not come up: see pm2 logs dermisque-web on the VM"; exit 1; }
+            echo "Storefront is healthy on the VM"
+            curl -fsS -o /dev/null --resolve www.dermisque.com:443:127.0.0.1 https://www.dermisque.com/
+            echo "nginx and HTTPS for www.dermisque.com are healthy"'
+
+      # Informational only: a 403 here means your CDN or firewall blocks GitHub's servers, not that the site is down.
+      - name: Public reachability from GitHub's network (informational)
+        continue-on-error: true
+        run: |
+          for u in https://www.dermisque.com/ https://api.dermisque.com/api/health; do
+            curl -sS -o /dev/null -m 20 -w "$u -> %{http_code}\n" "$u" || true
+          done
