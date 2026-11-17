@@ -12,7 +12,7 @@ export function NewsletterForm() {
 
   return (
     <form
-      className="group flex max-w-sm items-center rounded-full border border-white/15 bg-white/5 p-1.5 transition focus-within:border-amber"
+      className="group flex max-w-sm items-center rounded-full border border-[#b8955a]/60 bg-white/5 p-1.5 transition focus-within:border-[#d9b46a]"
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
@@ -36,7 +36,7 @@ export function NewsletterForm() {
       <button
         disabled={pending}
         aria-label="Subscribe"
-        className="grid size-10 place-items-center rounded-full bg-brand text-ink transition-transform duration-300 hover:scale-110 hover:rotate-[-8deg]"
+        className="grid size-10 place-items-center rounded-full bg-[#d9b46a] text-[#0f3d35] transition-transform duration-300 hover:scale-110 hover:rotate-[-8deg]"
       >
         {pending ? (
           <Loader2 className="size-4 animate-spin" />

@@ -160,7 +160,7 @@ export default function AboutPage() {
       </section>
 
       {/* journey */}
-      <section className="container-luxe grid items-center gap-12 py-20 sm:py-24 lg:grid-cols-[0.9fr_1.1fr]">
+      <section id="our-story" className="scroll-mt-28 container-luxe grid items-center gap-12 py-20 sm:py-24 lg:grid-cols-[0.9fr_1.1fr]">
         <Reveal>
           <div className="relative grid grid-cols-2 gap-4">
             {[

@@ -77,10 +77,80 @@ const policies: Record<string, Policy> = {
       { h: "Your rights", p: `You can access, correct or delete your data at any time. Contact ${site.email}.` },
     ],
   },
+  terms: {
+    title: "Terms of Use",
+    intro: `These terms apply to your use of the ${site.wordmark} website and to orders placed through it. By using the site you agree to them.`,
+    numbered: true,
+    sections: [
+      { h: "Who we are", p: `${site.wordmark} is a trading name of ${site.company}` },
+      { h: "Using the website", p: "You may browse and shop for personal, non-commercial use. Please don't misuse the site, attempt to access it in unauthorised ways, or copy its content without permission." },
+      { h: "Your account", p: "You're responsible for keeping your login details secure and for activity on your account. Tell us straight away if you think someone else has used it." },
+      { h: "Orders and pricing", p: "Placing an order is an offer to buy. We'll confirm by email once it's accepted. Prices and promotions can change, and we may cancel orders affected by an obvious pricing error, refunding you in full." },
+      { h: "Product information", p: "Our serums are cosmetic products. Information on this site is general skincare guidance, not medical advice. Always patch-test new products and consult a professional for skin conditions." },
+      { h: "Returns and replacements", p: "Damaged, defective or incorrect items are covered by our Return or Replacement Policy." },
+      { h: "Intellectual property", p: `All content on this site, including the ${site.wordmark} name, logo, images and text, belongs to us or our licensors.` },
+      { h: "Changes to these terms", p: "We may update these terms from time to time. The version on this page applies to your use of the site today." },
+    ],
+    outro: `Questions about these terms? Email ${site.email}.`,
+    cta: { href: "/contact", label: "Contact us" },
+  },
+  cookies: {
+    title: "Cookie Policy",
+    intro: "Cookies are small files a website stores in your browser. We keep their use to a minimum.",
+    sections: [
+      {
+        h: "Cookies we use",
+        p: "We only use essential cookies that the shop needs to work:",
+        list: [
+          "dq_session: keeps you signed in to your account.",
+          "dq_currency: remembers whether you're shopping in USD or GBP.",
+        ],
+      },
+      {
+        h: "Other browser storage",
+        p: "Your bag and wishlist are saved in your browser's local storage so they're still there when you come back. We also note when you've seen our intro animation or dismissed the chat prompt, so we don't show them again.",
+      },
+      {
+        h: "Analytics and advertising",
+        p: "We don't use analytics, tracking or advertising cookies, and we don't share browsing data with third parties.",
+      },
+      {
+        h: "Your preferences",
+        p: "Because we only use essential cookies, there's nothing to opt in or out of. You can still clear or block cookies in your browser settings, but signing in and currency selection won't work without them.",
+      },
+    ],
+    outro: "If we ever add non-essential cookies, we'll update this page and ask for your consent first.",
+  },
+  accessibility: {
+    title: "Accessibility",
+    intro: `We want everyone to be able to shop ${site.wordmark} comfortably, whatever device or assistive technology they use.`,
+    sections: [
+      {
+        h: "What we do",
+        p: "We design and build the site with accessibility in mind, aiming to follow WCAG 2.1 AA guidance:",
+        list: [
+          "Text alternatives for product and decorative images",
+          "Keyboard-accessible menus, forms and the bag",
+          "Readable colour contrast and resizable text",
+          "Clear labels and error messages on every form",
+          "Pages that work on phones, tablets and desktops",
+        ],
+      },
+      { h: "Known limitations", p: "Some older blog images and third-party content may not yet meet every standard. We're working through them." },
+      { h: "Need help?", p: "If anything on the site is difficult to use, tell us. We'll help you place your order another way and fix the problem." },
+    ],
+    outro: `Email ${site.email} or call our team using the numbers on the contact page.`,
+    cta: { href: "/contact", label: "Contact us" },
+  },
 };
 
 export function generateStaticParams() {
   return Object.keys(policies).map((slug) => ({ slug }));
+}
+
+export async function generateMetadata({ params }: PageProps<"/policies/[slug]">) {
+  const policy = policies[(await params).slug];
+  return { title: policy?.title ?? "Policy not found" };
 }
 
 export default async function PolicyPage({ params }: PageProps<"/policies/[slug]">) {
