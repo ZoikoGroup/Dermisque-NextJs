@@ -1,0 +1,153 @@
+name: Deploy Dermisque
+
+# Every merge to main deploys the whole shop: the API first, then the storefront.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dermisque
+  cancel-in-progress: false
+
+jobs:
+  backend:
+    name: API
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # The API needs Python 3.12 or newer (app/chat/knowledge.py uses 3.12-only f-string syntax).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Smoke test (dependencies install and the app imports)
+        working-directory: backend
+        run: |
+          python -m pip install -q -r requirements.txt
+          python -c "import app.main"
+
+      - name: Configure SSH
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_SSH_KEY_B64: ${{ secrets.VM_SSH_KEY_B64 }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VM_SSH_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      # Never deleted or overwritten: .venv, .env, uploads/ (product images), the requirements marker.
+      # -c compares file contents, so only files that really changed are copied and reported.
+      - name: Sync backend source
+        id: sync
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          rsync -azc --delete -i \
+            --exclude /.venv --exclude /.env --exclude '/.env.*' --exclude /uploads \
+            --exclude /.deployed-requirements \
+            --exclude __pycache__ --exclude '*.pyc' \
+            backend/ "$VM_USER@$VM_HOST:~/dermisque/backend/" > rsync-backend.log
+          if grep -qE '^(>f|\*deleting|cd)' rsync-backend.log; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Backend files changed:"
+            grep -E '^(>f|\*deleting|cd)' rsync-backend.log | head -20
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No backend changes: skipping install and restart"
+          fi
+
+      - name: Dependencies and restart
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          ssh "$VM_USER@$VM_HOST" 'set -e
+            cd ~/dermisque/backend
+            if ! cmp -s requirements.txt .deployed-requirements; then
+              .venv/bin/pip install -q -r requirements.txt
+              cp requirements.txt .deployed-requirements
+            fi
+            sudo systemctl restart dermisque-api'
+
+      - name: Wait for the API to be healthy
+        run: |
+          for _ in $(seq 1 20); do
+            if curl -fsS https://api.dermisque.com/api/health | grep -q '"ok"'; then
+              echo "API healthy"; exit 0
+            fi
+            sleep 3
+          done
+          echo "API did not become healthy: check journalctl -u dermisque-api on the VM"; exit 1
+
+  frontend:
+    name: Storefront
+    needs: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # The storefront needs no environment variables to build (every page is rendered on request).
+      # API_URL and JWT_SECRET live in ~/dermisque/frontend/.env.production on the server.
+      - name: Install and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure SSH
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_SSH_KEY_B64: ${{ secrets.VM_SSH_KEY_B64 }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VM_SSH_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Sync files to VM
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude node_modules --exclude .git \
+            --exclude '.env*' --exclude .deployed-lock --exclude .next/cache \
+            frontend/ "$VM_USER@$VM_HOST:~/dermisque/frontend/"
+
+      - name: Install deps if changed and restart
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          ssh "$VM_USER@$VM_HOST" 'set -e
+            cd ~/dermisque/frontend
+            if ! cmp -s package-lock.json .deployed-lock; then
+              npm ci
+              cp package-lock.json .deployed-lock
+            fi
+            pm2 restart dermisque-web --update-env
+            pm2 save'
+
+      - name: Health check
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          sleep 8
+          ssh "$VM_USER@$VM_HOST" 'curl -fsI http://localhost:3100 | head -1'
+          curl -fsS -o /dev/null -w "www.dermisque.com -> %{http_code}\n" https://www.dermisque.com/
