@@ -1,5 +1,5 @@
 import { ClipboardList, MessageCircle, Sparkles } from "lucide-react";
-import { MessageForm } from "@/components/store/message-form";
+import { ConsultationForm } from "@/components/store/consultation-form";
 import { Reveal, Stagger, StaggerItem } from "@/components/ui/reveal";
 
 export const metadata = { title: "Free Consultation & Skin Assessment" };
@@ -38,8 +38,8 @@ export default function ConsultationPage() {
 
       <div id="assessment" className="mt-12 scroll-mt-24">
         <Reveal>
-          <h2 className="mb-6 font-display text-3xl">Free skin assessment</h2>
-          <MessageForm type="CONSULTATION" />
+          <h2 className="mb-6 font-display text-3xl">Book your free consultation</h2>
+          <ConsultationForm />
         </Reveal>
       </div>
     </div>

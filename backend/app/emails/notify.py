@@ -196,9 +196,12 @@ def _sample_order(status="PROCESSING", payment="CARD", pay_status="PAID") -> dic
 
 
 _MSG = {"type": "CONSULTATION", "name": "Ava Thompson", "email": "ava@example.com", "phone": "+1 555 0100",
-        "subject": None, "skin_type": "Combination", "concern": "Dark spots & uneven tone",
+        "subject": None, "skin_type": None, "concern": None,
         "message": "Hi! I have some pigmentation on my cheeks after summer. Which serum would you recommend, "
-                   "and can I combine it with retinol?"}
+                   "and can I combine it with retinol?",
+        "details": {"date_of_birth": "1994-06-12", "gender": "Female", "address": "1401 21st Street, Sacramento, CA",
+                    "preferred_date": "2026-12-02", "preferred_time": "14:30", "previous_consultation": "No",
+                    "medications": "None", "recent_treatments": "No", "consent_online": True, "info_accurate": True}}
 
 
 def _sample_fail():

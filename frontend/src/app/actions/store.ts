@@ -12,15 +12,27 @@ export async function subscribe(email: string) {
   return attempt(() => api("/api/subscribe", { method: "POST", auth: false, body: { email } }));
 }
 
+export type ConsultationDetails = {
+  dateOfBirth: string;
+  gender: string | null;
+  address: string | null;
+  preferredDate: string | null;
+  preferredTime: string | null;
+  previousConsultation: string | null;
+  medications: string | null;
+  recentTreatments: string | null;
+  consentOnline: boolean;
+  infoAccurate: boolean;
+};
+
 export async function sendMessage(data: {
   type: "CONTACT" | "CONSULTATION";
   name: string;
   email: string;
   phone?: string;
   subject?: string;
-  skinType?: string;
-  concern?: string;
   message: string;
+  details?: ConsultationDetails;
 }) {
   const clean = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, v === "" ? null : v]));
   return attempt(() => api("/api/messages", { method: "POST", auth: false, body: clean }));

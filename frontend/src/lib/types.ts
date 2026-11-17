@@ -135,6 +135,16 @@ export type Message = {
   skinType: string | null;
   concern: string | null;
   message: string;
+  details: {
+    dateOfBirth: string;
+    gender: string | null;
+    address: string | null;
+    preferredDate: string | null;
+    preferredTime: string | null;
+    previousConsultation: string | null;
+    medications: string | null;
+    recentTreatments: string | null;
+  } | null;
   status: "NEW" | "READ" | "RESOLVED";
   createdAt: string;
 };

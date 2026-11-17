@@ -51,7 +51,13 @@ export default async function Messages({ searchParams }: PageProps<"/admin/messa
                   {m.concern && <span className="rounded-full border border-line px-2.5 py-1">Concern: {m.concern}</span>}
                 </div>
               )}
-              <p className="mt-4 whitespace-pre-line text-sm">{m.message}</p>
+              {m.details && <ConsultationDetails d={m.details} />}
+              {m.message && (
+                <div className="mt-4">
+                  {m.details && <p className="text-xs font-medium uppercase tracking-wider text-mute">Reason for consultation</p>}
+                  <p className="mt-1 whitespace-pre-line text-sm">{m.message}</p>
+                </div>
+              )}
               <div className="mt-5">
                 <MessageActions id={m.id} status={m.status} />
               </div>
@@ -60,5 +66,33 @@ export default async function Messages({ searchParams }: PageProps<"/admin/messa
         </div>
       )}
     </div>
+  );
+}
+
+const day = (iso: string) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+function ConsultationDetails({ d }: { d: NonNullable<Message["details"]> }) {
+  const rows: [string, string | null][] = [
+    ["Date of birth", day(d.dateOfBirth)],
+    ["Gender", d.gender],
+    ["Address", d.address],
+    ["Preferred date", d.preferredDate && day(d.preferredDate)],
+    ["Preferred time", d.preferredTime],
+    ["Consulted before", d.previousConsultation],
+    ["Recent treatments / surgery", d.recentTreatments],
+    ["Current medications", d.medications],
+  ];
+  return (
+    <dl className="mt-4 grid gap-x-6 gap-y-3 rounded-2xl bg-cream/60 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+      {rows
+        .filter(([, v]) => v)
+        .map(([k, v]) => (
+          <div key={k}>
+            <dt className="text-xs text-mute">{k}</dt>
+            <dd className="mt-0.5 whitespace-pre-line">{v}</dd>
+          </div>
+        ))}
+    </dl>
   );
 }

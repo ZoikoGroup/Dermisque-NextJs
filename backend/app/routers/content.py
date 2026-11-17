@@ -23,7 +23,7 @@ def subscribe(body: SubscribeIn, db: Session = Depends(get_db)):
 
 @router.post("/messages", response_model=Ok, status_code=201)
 def send_message(body: MessageIn, db: Session = Depends(get_db)):
-    data = body.model_dump()
+    data = body.model_dump(mode="json")
     db.add(Message(**data))
     db.commit()
     notify.message(data)  # acknowledgement to the customer + alert to the store

@@ -94,13 +94,47 @@ def newsletter_welcome(to: str, *, inline=True) -> Email:
                   "Skin science, launches and subscriber-only offers.", body, inline=inline)
 
 
+_CONSULT_FIELDS = [
+    ("date_of_birth", "Date of birth"), ("gender", "Gender"), ("address", "Address"),
+    ("preferred_date", "Preferred date"), ("preferred_time", "Preferred time"),
+    ("previous_consultation", "Consulted us before"), ("medications", "Current medications"),
+    ("recent_treatments", "Recent skin treatments / surgery"),
+]
+
+
+def _consult_rows(m: dict) -> list[tuple[str, str]]:
+    """Consultation answers as label/value rows (older requests only have skin type and concern)."""
+    d = m.get("details")
+    if not d:
+        return [("Skin type", e(m.get("skin_type") or "—")), ("Main concern", e(m.get("concern") or "—"))]
+    rows = []
+    for key, label in _CONSULT_FIELDS:
+        v = d.get(key)
+        if not v:
+            continue
+        if key in ("date_of_birth", "preferred_date"):
+            v = _date(datetime.fromisoformat(str(v)))
+        rows.append((label, e(str(v))))
+    return rows
+
+
+def _message_text(m: dict, color: str, size: int) -> str:
+    """The free-text part of a message, under a dashed rule (labelled for consultations)."""
+    if not m.get("message"):
+        return ""
+    label = (f'<p style="margin:0 0 6px;font:600 11px/1.4 {SANS};letter-spacing:2px;text-transform:uppercase;'
+             f'color:{MUTE}">Reason for consultation</p>') if m.get("type") == "CONSULTATION" else ""
+    return (f'<div style="margin:14px 0 0;padding-top:14px;border-top:1px dashed {LINE}">{label}'
+            f'<p style="margin:0;font:400 {size}px/1.7 {SANS};color:{color};white-space:pre-line">{e(m["message"])}</p></div>')
+
+
 def message_received(m: dict, *, inline=True) -> Email:
     consult = m.get("type") == "CONSULTATION"
     summary = [("Name", e(m["name"])), ("Email", e(m["email"]))]
     if m.get("phone"):
         summary.append(("Phone", e(m["phone"])))
     if consult:
-        summary += [("Skin type", e(m.get("skin_type") or "—")), ("Main concern", e(m.get("concern") or "—"))]
+        summary += _consult_rows(m)
     elif m.get("subject"):
         summary.append(("Subject", e(m["subject"])))
 
@@ -112,8 +146,7 @@ def message_received(m: dict, *, inline=True) -> Email:
                     if consult else
                     "We've received your message and a member of our team will get back to you within <b>1–2 business days</b>."))
             + spacer(26)
-            + row(card(eyebrow("What you sent us", MUTE) + kv(summary)
-                       + f'<p style="margin:14px 0 0;padding-top:14px;border-top:1px dashed {LINE};font:400 14px/1.7 {SANS};color:{SOFT};white-space:pre-line">{e(m["message"])}</p>'))
+            + row(card(eyebrow("What you sent us", MUTE) + kv(summary) + _message_text(m, SOFT, 14)))
             + spacer(10)
             + row(p("While you wait, browse serums by concern — every formula targets one with three complementary actives.")
                   + button("Shop by concern", "/shop"))
@@ -368,7 +401,7 @@ def admin_new_message(m: dict, *, inline=True) -> Email:
     if m.get("phone"):
         rows.append(("Phone", e(m["phone"])))
     if consult:
-        rows += [("Skin type", e(m.get("skin_type") or "—")), ("Concern", e(m.get("concern") or "—"))]
+        rows += _consult_rows(m)
     if m.get("subject"):
         rows.append(("Subject", e(m["subject"])))
 
@@ -377,8 +410,7 @@ def admin_new_message(m: dict, *, inline=True) -> Email:
             row(eyebrow("New consultation request" if consult else "New contact message")
                 + h1(m["name"], "wrote in.") + p("Reply directly to this email to answer the customer."))
             + spacer(24)
-            + row(card(kv(rows) + f'<p style="margin:14px 0 0;padding-top:14px;border-top:1px dashed {LINE};font:400 15px/1.7 {SANS};'
-                       f'color:{INK};white-space:pre-line">{e(m["message"])}</p>'))
+            + row(card(kv(rows) + _message_text(m, INK, 15)))
             + row(button("Open inbox", "/admin/messages"))
         )
     subject = f"✨ New consultation request from {m['name']}" if consult else f"✉ New message from {m['name']}" + (

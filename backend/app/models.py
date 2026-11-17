@@ -177,6 +177,7 @@ class Message(Base):
     skin_type: Mapped[str | None] = mapped_column(String(60))
     concern: Mapped[str | None] = mapped_column(String(120))
     message: Mapped[str] = mapped_column(Text)
+    details: Mapped[dict | None] = mapped_column(JSON)  # consultation form answers (see schemas.ConsultationDetails)
     status: Mapped[str] = mapped_column(String(10), default="NEW")  # NEW | READ | RESOLVED
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 

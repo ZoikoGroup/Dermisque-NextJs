@@ -1,9 +1,9 @@
 """Request/response schemas. JSON uses camelCase; Python uses snake_case."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated, Generic, Literal, TypeVar
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
 T = TypeVar("T")
@@ -248,7 +248,25 @@ class SubscribeIn(Schema):
     email: EmailStr
 
 
-class MessageIn(Schema):
+YesNo = Literal["Yes", "No"]
+
+
+class ConsultationDetails(Schema):
+    """Answers from the free consultation form (stored as JSON on the message)."""
+
+    date_of_birth: date
+    gender: Literal["Female", "Male", "Non-binary", "Prefer not to say"] | None = None
+    address: str | None = Field(default=None, max_length=300)
+    preferred_date: date | None = None
+    preferred_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    previous_consultation: YesNo | None = None
+    medications: str | None = Field(default=None, max_length=1000)
+    recent_treatments: YesNo | None = None
+    consent_online: bool = False
+    info_accurate: bool = False
+
+
+class MessageBase(Schema):
     type: Literal["CONTACT", "CONSULTATION"]
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr
@@ -256,10 +274,34 @@ class MessageIn(Schema):
     subject: str | None = Field(default=None, max_length=200)
     skin_type: str | None = Field(default=None, max_length=60)
     concern: str | None = Field(default=None, max_length=120)
-    message: str = Field(min_length=10, max_length=5000)
+    message: str = Field(default="", max_length=5000)
+    details: ConsultationDetails | None = None
 
 
-class MessageOut(MessageIn):
+class MessageIn(MessageBase):
+    @model_validator(mode="after")
+    def _check(self):
+        self.message = (self.message or "").strip()
+        if self.type == "CONTACT":
+            if len(self.message) < 10:
+                raise ValueError("Please write a message of at least 10 characters")
+            return self
+        d = self.details
+        if d is None:
+            raise ValueError("Please complete the consultation form")
+        if not (self.phone or "").strip():
+            raise ValueError("Please enter your contact number")
+        today = date.today()
+        if not date(1900, 1, 1) <= d.date_of_birth < today:
+            raise ValueError("Please enter a valid date of birth")
+        if d.preferred_date and d.preferred_date < today - timedelta(days=1):
+            raise ValueError("Your preferred appointment date can't be in the past")
+        if not (d.consent_online and d.info_accurate):
+            raise ValueError("Please tick both confirmation boxes to continue")
+        return self
+
+
+class MessageOut(MessageBase):
     id: str
     status: str
     created_at: UTCDatetime
