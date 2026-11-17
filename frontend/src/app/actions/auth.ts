@@ -24,7 +24,7 @@ export async function login(_: FormState, formData: FormData): Promise<FormState
     }),
   );
   if (!res.ok) return { error: res.error };
-  await setSessionToken(res.data.accessToken);
+  await setSessionToken(res.data.accessToken, formData.get("remember") === "on");
   redirect(safeNext(formData.get("next"), res.data.user.role === "ADMIN" ? "/admin" : "/account"));
 }
 

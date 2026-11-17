@@ -8,13 +8,14 @@ export const getToken = cache(async () => (await cookies()).get(SESSION_COOKIE)?
 
 export const getSession = cache(async () => verifySession(await getToken()));
 
-export async function setSessionToken(token: string) {
+/** remember=false makes it a browser-session cookie, cleared when the browser closes. */
+export async function setSessionToken(token: string, remember = true) {
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_MAX_AGE,
+    ...(remember ? { maxAge: SESSION_MAX_AGE } : {}),
   });
 }
 
