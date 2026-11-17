@@ -48,7 +48,7 @@ Open http://localhost:3100
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@dermisque.com | Admin@12345 |
+| Admin | info@dermisque.com | Admin@12345 |
 | Customer | demo@dermisque.com | Demo@12345 |
 
 Change the admin password (`ADMIN_EMAIL` / `ADMIN_PASSWORD` in `backend/.env` before seeding) before going live.

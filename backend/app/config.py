@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     public_url: str = "http://127.0.0.1:8000"
     upload_dir: Path = BASE_DIR / "uploads"
 
-    admin_email: str = "admin@dermisque.com"
+    admin_email: str = "info@dermisque.com"
     admin_password: str = "Admin@12345"
 
     # Shop rules (amounts in cents, USD)

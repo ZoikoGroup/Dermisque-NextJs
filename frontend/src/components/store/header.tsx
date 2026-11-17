@@ -30,7 +30,6 @@ type SessionLite = { name: string; role: "USER" | "ADMIN" } | null;
 const nav: { href: string; label: string; mega?: boolean; hot?: boolean }[] = [
   { href: "/", label: "Home" },
   { href: "/shop", label: "All Products" },
-  { href: "/black-friday", label: "Black Friday", hot: true },
   { href: "#concern", label: "Shop by Concern", mega: true },
   { href: "/about", label: "About" },
   { href: "/blog", label: "Blog" },
