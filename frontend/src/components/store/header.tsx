@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -23,24 +22,25 @@ import { useWishlist } from "@/store/wishlist";
 import { useMounted } from "@/hooks/use-mounted";
 import { logout } from "@/app/actions/auth";
 import { concerns } from "@/lib/site";
+import { NavMenu, type MenuKey } from "@/components/store/nav-menus";
 import { cn } from "@/lib/utils";
 
 type SessionLite = { name: string; role: "USER" | "ADMIN" } | null;
 
-const nav: { href: string; label: string; mega?: boolean; hot?: boolean }[] = [
+const nav: { href: string; label: string; menu?: MenuKey; hot?: boolean }[] = [
   { href: "/", label: "Home" },
-  { href: "/shop", label: "All Products" },
-  { href: "#concern", label: "Shop by Concern", mega: true },
+  { href: "/shop", label: "All Products", menu: "products" },
+  { href: "/shop", label: "Shop by Concern", menu: "concern" },
   { href: "/about", label: "About" },
   { href: "/blog", label: "Blog" },
-  { href: "/consultation", label: "Free Consultation" },
+  { href: "/consultation", label: "Free Consultation", menu: "consult" },
   { href: "/contact", label: "Contact" },
 ];
 
 export function Header({ session }: { session: SessionLite }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
-  const [mega, setMega] = useState(false);
+  const [menu, setMenu] = useState<MenuKey | null>(null);
   const [mobile, setMobile] = useState(false);
   const [search, setSearch] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
@@ -52,11 +52,18 @@ export function Header({ session }: { session: SessionLite }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenu(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menu]);
+
   // Close menus on navigation (reset state when the path changes, during render)
   const [lastPath, setLastPath] = useState(pathname);
   if (lastPath !== pathname) {
     setLastPath(pathname);
-    setMega(false);
+    setMenu(null);
     setMobile(false);
     setSearch(false);
     setUserMenu(false);
@@ -71,7 +78,7 @@ export function Header({ session }: { session: SessionLite }) {
             ? "border-line/80 bg-white/85 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.25)] backdrop-blur-xl"
             : "border-line bg-white",
         )}
-        onMouseLeave={() => setMega(false)}
+        onMouseLeave={() => setMenu(null)}
       >
         <div
           className={cn(
@@ -93,35 +100,37 @@ export function Header({ session }: { session: SessionLite }) {
 
           <nav className="hidden items-center gap-5 lg:flex xl:gap-9">
             {nav.map((item) => {
-              const active = item.mega ? mega : item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-              const cls = cn(
-                "group relative flex items-center gap-1 whitespace-nowrap py-2 text-[0.92rem] text-ink transition-colors hover:text-[#0f3d35] xl:text-[1.05rem]",
-                item.hot && "font-semibold text-[#9b1c2c]",
-              );
-              const bar = (
-                <span
-                  className={cn(
-                    "absolute -bottom-1.5 left-0 h-[3px] w-full origin-left rounded-full bg-[#b8955a] transition-transform duration-300",
-                    active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100",
-                  )}
-                />
-              );
-              return item.mega ? (
-                <button
+              const open = !!item.menu && menu === item.menu;
+              const active = menu
+                ? open
+                : !item.menu || item.menu === "products"
+                  ? item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+                  : false;
+              return (
+                <Link
                   key={item.label}
-                  onMouseEnter={() => setMega(true)}
-                  onClick={() => setMega((v) => !v)}
-                  className={cls}
-                  aria-expanded={mega}
+                  href={item.href}
+                  onMouseEnter={() => setMenu(item.menu ?? null)}
+                  onFocus={() => item.menu && setMenu(item.menu)}
+                  onClick={() => setMenu(null)}
+                  aria-expanded={item.menu ? open : undefined}
+                  aria-haspopup={item.menu ? "true" : undefined}
+                  className={cn(
+                    "group relative flex items-center gap-1 whitespace-nowrap py-2 text-[0.92rem] text-ink transition-colors hover:text-[#0f3d35] xl:text-[1.05rem]",
+                    open && "text-[#0f3d35]",
+                    item.hot && "font-semibold text-[#9b1c2c]",
+                  )}
                 >
                   {item.label}
-                  <ChevronDown className={cn("size-3.5 transition-transform duration-300", mega && "rotate-180")} />
-                  {bar}
-                </button>
-              ) : (
-                <Link key={item.href} href={item.href} onMouseEnter={() => setMega(false)} className={cls}>
-                  {item.label}
-                  {bar}
+                  {item.menu && (
+                    <ChevronDown className={cn("size-3.5 transition-transform duration-300", open && "rotate-180")} />
+                  )}
+                  <span
+                    className={cn(
+                      "absolute -bottom-1.5 left-0 h-[3px] w-full origin-left rounded-full bg-[#b8955a] transition-transform duration-300",
+                      active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100",
+                    )}
+                  />
                 </Link>
               );
             })}
@@ -195,62 +204,37 @@ export function Header({ session }: { session: SessionLite }) {
           </div>
         </div>
 
-        {/* Mega menu */}
+        {/* dropdown panels */}
         <AnimatePresence>
-          {mega && (
+          {menu && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-x-0 top-full hidden border-b border-line bg-white/95 backdrop-blur-xl lg:block"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.2 } }}
+              className="absolute inset-x-0 top-full hidden pt-3 lg:block"
             >
-              <div className="container-luxe grid grid-cols-[1fr_320px] gap-10 py-10">
-                <div>
-                  <p className="eyebrow mb-5">Shop by concern</p>
-                  <div className="grid grid-cols-3 gap-x-8 gap-y-1">
-                    {concerns.map((c, i) => (
-                      <motion.div
-                        key={c.slug}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.03 }}
-                      >
-                        <Link
-                          href={`/shop?concern=${c.slug}`}
-                          className="group flex items-center justify-between rounded-xl px-3 py-3 font-display text-lg transition-colors hover:bg-cream"
-                        >
-                          {c.name}
-                          <span className="translate-x-[-6px] text-brand opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
-                            →
-                          </span>
-                        </Link>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-                <Link
-                  href="/shop"
-                  className="group relative block aspect-[4/3] overflow-hidden rounded-3xl"
-                >
-                  <Image
-                    src="/products/gold-serum.jpg"
-                    alt="24 KT Gold Serum"
-                    fill
-                    sizes="320px"
-                    className="object-cover transition-transform duration-[1.2s] ease-[var(--ease-luxe)] group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-ink/70 to-transparent" />
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <p className="text-xs uppercase tracking-[0.25em] opacity-80">New icon</p>
-                    <p className="font-display text-xl">24 KT Gold Serum</p>
-                  </div>
-                </Link>
+              <div className="mx-auto w-full max-w-[112rem] px-6 xl:px-16 2xl:px-24">
+                <AnimatePresence mode="wait" initial={false}>
+                  <NavMenu key={menu} menu={menu} onNavigate={() => setMenu(null)} />
+                </AnimatePresence>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </header>
+
+      <AnimatePresence>
+        {menu && (
+          <motion.div
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="pointer-events-none fixed inset-0 z-30 hidden bg-[#0f3d35]/20 lg:block"
+          />
+        )}
+      </AnimatePresence>
 
       <SearchOverlay open={search} onClose={() => setSearch(false)} />
       <MobileMenu open={mobile} onClose={() => setMobile(false)} session={session} />
@@ -435,10 +419,10 @@ function MobileMenu({
             </div>
             <nav className="flex flex-col p-5">
               {nav
-                .filter((n) => !n.mega)
+                .filter((n) => n.menu !== "concern")
                 .map((n, i) => (
                   <motion.div
-                    key={n.href}
+                    key={n.label}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.1 + i * 0.05 }}

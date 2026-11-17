@@ -91,6 +91,13 @@ export function ChatWidget() {
     setOpen((o) => value ?? !o);
   };
 
+  // other parts of the site (e.g. the nav's "Talk to a Product Expert") can open the chat
+  useEffect(() => {
+    const onOpen = () => toggle(true);
+    window.addEventListener("dq:open-chat", onOpen);
+    return () => window.removeEventListener("dq:open-chat", onOpen);
+  });
+
   const dismissTeaser = () => {
     setTeaser(false);
     try {

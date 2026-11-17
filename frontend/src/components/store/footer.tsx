@@ -11,6 +11,7 @@ const cols = [
       { href: "/", label: "Home" },
       { href: "/about", label: "About Us" },
       { href: "/shop", label: "Products" },
+      { href: "/collections", label: "Collections" },
       { href: "/consultation", label: "Free Consultation" },
       { href: "/skin-assessment", label: "Free Skin Assessment" },
       { href: "/contact", label: "Contact Us" },
