@@ -118,7 +118,7 @@ const yearFmt = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
   timeZone: "Europe/London",
 });
-/** "27 November" */
+/** "20 November" */
 export const ukDay = (iso: string) => dayFmt.format(new Date(iso));
-/** "27 November 2026" */
+/** "20 November 2026" */
 export const ukDate = (iso: string) => yearFmt.format(new Date(iso));

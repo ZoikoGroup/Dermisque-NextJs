@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     # ── Black Friday campaign (UK time = UTC in November) ──
     # Sale prices apply automatically between these instants; bundles can only be bought while live.
-    black_friday_start: str = "2026-11-27T00:00:00+00:00"
+    black_friday_start: str = "2026-11-20T00:00:00+00:00"
     black_friday_end: str = "2026-11-30T23:59:59+00:00"
     black_friday_single_pct: int = 40
     black_friday_combo_pct: int = 45

@@ -2,38 +2,54 @@
 
 import { motion } from "motion/react";
 import { useNow } from "@/hooks/use-now";
-import { type BlackFriday } from "@/lib/black-friday";
+import { type BlackFriday, ukDay } from "@/lib/black-friday";
 import { cn } from "@/lib/utils";
 import { Pill } from "./parts";
 
 const DAY = 86_400_000;
 const fmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" });
+const label = (from: number, to: number) => {
+  const a = fmt.format(from).replace(",", "");
+  return (to - from > DAY ? `${a} – ${fmt.format(to - DAY).replace(",", "")}` : a).toUpperCase();
+};
 
 export function SaleWeekend({ data }: { data: BlackFriday }) {
   const now = useNow();
-  // the four official sale days run from the campaign's final Friday (end - 3 days)
-  const end = Date.parse(data.endsAt);
-  const friday = new Date(end - 3 * DAY);
-  friday.setUTCHours(0, 0, 0, 0);
+  const midnight = (t: number) => {
+    const d = new Date(t);
+    d.setUTCHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+  const open = midnight(Date.parse(data.startsAt));
+  const close = midnight(Date.parse(data.endsAt)) + DAY; // the sale runs to the end of its last day
+  const friday = close - 4 * DAY; // Black Friday is the campaign's final Friday
+  const totalDays = Math.round((close - open) / DAY);
+
   const days = [
-    { title: "Black Friday", text: `${data.singlePct}% off serums, ${data.comboPct}% off combos go live.` },
-    { title: "Weekend sale", text: "Same Black Friday prices." },
-    { title: "Weekend sale", text: "Same Black Friday prices." },
-    { title: "Cyber Monday", text: "Last day. Sale ends 23:59." },
-  ].map((d, i) => {
-    const start = friday.getTime() + i * DAY;
-    return { ...d, start, label: fmt.format(start).replace(",", "").toUpperCase(), today: now !== null && now >= start && now < start + DAY };
-  });
+    ...(friday > open
+      ? [{ title: "Sale opens", text: `${data.singlePct}% off serums, ${data.comboPct}% off combos go live.`, from: open, to: friday }]
+      : []),
+    {
+      title: "Black Friday",
+      text: friday > open ? "Same Black Friday prices." : `${data.singlePct}% off serums, ${data.comboPct}% off combos go live.`,
+      from: Math.max(friday, open),
+      to: friday + DAY,
+    },
+    { title: "Weekend sale", text: "Same Black Friday prices.", from: friday + DAY, to: friday + 3 * DAY },
+    { title: "Cyber Monday", text: "Last day. Sale ends 23:59.", from: friday + 3 * DAY, to: close },
+  ].map((d) => ({ ...d, start: d.from, label: label(d.from, d.to), today: now !== null && now >= d.from && now < d.to }));
   const anyToday = days.some((d) => d.today);
 
   return (
     <section className="px-4 py-14 sm:py-20">
       <div className="mx-auto max-w-5xl text-center">
-        <Pill>The sale weekend</Pill>
+        <Pill>The sale dates</Pill>
         <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-5xl">
-          Four days. <span className="text-[#c9a227]">One big saving.</span>
+          {totalDays} days. <span className="text-[#c9a227]">One big saving.</span>
         </h2>
-        <p className="mt-3 text-sm text-mute">The same Black Friday prices run from Friday through Cyber Monday.</p>
+        <p className="mt-3 text-sm text-mute">
+          The same Black Friday prices run from {ukDay(data.startsAt)} through Cyber Monday, {ukDay(data.endsAt)}.
+        </p>
       </div>
 
       <div className="relative mx-auto mt-12 max-w-6xl">
