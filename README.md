@@ -58,10 +58,16 @@ Change the admin password (`ADMIN_EMAIL` / `ADMIN_PASSWORD` in `backend/.env` be
 - `DERMISQUE` — 25% off
 
 ### Payments
-Checkout runs in **demo payment mode** (no real charge). Any future expiry works;
-card `4000 0000 0000 0002` simulates a decline. Replace `charge_card()` in
-`backend/app/routers/checkout.py` with Stripe/PayPal to take real payments.
-Cash on delivery is also supported.
+Card payments go through **Stripe** when `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY`
+are set in `backend/.env` (the storefront reads the publishable key from the API, so the
+frontend needs no Stripe setting). The checkout shows Stripe's Payment Element; the methods
+offered (cards, Klarna, Amazon Pay, ...) are switched on in Stripe Dashboard -> Settings ->
+Payment methods. The API prices the bag itself, verifies the payment with Stripe before
+creating the order, and refunds automatically if the order can't be created.
+Test keys (`sk_test_`/`pk_test_`): card `4242 4242 4242 4242`, any future date, any CVC.
+
+Without Stripe keys checkout falls back to a **demo payment mode** (no real charge;
+card `4000 0000 0000 0002` simulates a decline). Cash on delivery is also supported.
 
 ## Currency (USD / GBP)
 

@@ -70,7 +70,26 @@ export type PlaceOrderInput = {
   coupon?: string | null;
   notes?: string;
   currency?: "USD" | "GBP";
+  /** Stripe PaymentIntent the customer already confirmed */
+  paymentIntentId?: string;
 };
+
+export type PaymentIntentInput = {
+  items: { id: string; quantity: number }[];
+  coupon?: string | null;
+  currency: "USD" | "GBP";
+  paymentIntentId?: string | null;
+};
+
+/** Prices the bag on the server and returns a Stripe client secret for it. */
+export async function createPaymentIntent(input: PaymentIntentInput) {
+  return attempt(() =>
+    api<{ clientSecret: string; paymentIntentId: string; amount: number; currency: string }>(
+      "/api/checkout/payment-intent",
+      { method: "POST", body: input },
+    ),
+  );
+}
 
 export async function placeOrder(input: PlaceOrderInput) {
   const res = await attempt(() => api<Order>("/api/checkout/orders", { method: "POST", body: input }));

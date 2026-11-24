@@ -11,3 +11,4 @@ psycopg[binary]>=3.2
 pillow>=11.0
 certifi>=2024.8
 anthropic>=2.8
+stripe>=17.1

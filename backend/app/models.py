@@ -117,6 +117,8 @@ class Order(Base):
     status: Mapped[str] = mapped_column(String(20), default="PENDING")
     payment_method: Mapped[str] = mapped_column(String(10))  # CARD | COD
     payment_status: Mapped[str] = mapped_column(String(10), default="UNPAID")  # UNPAID | PAID | REFUNDED
+    # Stripe PaymentIntent id (pi_...) for card orders paid through Stripe; unique so one payment = one order.
+    payment_ref: Mapped[str | None] = mapped_column(String(64), unique=True)
     subtotal: Mapped[int] = mapped_column(Integer)
     discount: Mapped[int] = mapped_column(Integer, default=0)
     shipping: Mapped[int] = mapped_column(Integer, default=0)

@@ -4,7 +4,7 @@ import { useCurrency, usePrice } from "@/components/store/currency-provider";
 import Image from "@/components/ui/product-image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
@@ -29,7 +29,15 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { placeOrder, validateCoupon } from "@/app/actions/store";
+import { createPaymentIntent, placeOrder, validateCoupon, type PlaceOrderInput } from "@/app/actions/store";
+import {
+  PENDING_ORDER_KEY,
+  StripeBridge,
+  StripeElements,
+  StripePaymentFields,
+  type PaymentConfig,
+} from "@/components/checkout/stripe-payment";
+import type { Stripe, StripeElements as StripeElementsInstance } from "@stripe/stripe-js";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { useMounted } from "@/hooks/use-mounted";
 import { computeTotals, type AppliedCoupon } from "@/lib/pricing";
@@ -61,9 +69,24 @@ const cardBrand = (n: string) => {
   return "";
 };
 
-export function CheckoutForm({ addresses, user }: { addresses: Address[]; user: { name: string; phone: string } }) {
+export function CheckoutForm({
+  addresses,
+  user,
+  payments,
+}: {
+  addresses: Address[];
+  user: { name: string; phone: string };
+  payments: PaymentConfig;
+}) {
   const formatPrice = usePrice();
-  const { currency } = useCurrency();
+  const { currency, rates } = useCurrency();
+  const stripeKey = payments.provider === "stripe" ? payments.publishableKey : null;
+  const stripeRef = useRef<{ stripe: Stripe; elements: StripeElementsInstance } | null>(null);
+  const onStripeReady = useCallback((s: { stripe: Stripe; elements: StripeElementsInstance } | null) => {
+    stripeRef.current = s;
+  }, []);
+  const intentRef = useRef<string | null>(null);
+  const [stripeComplete, setStripeComplete] = useState(false);
   const router = useRouter();
   const mounted = useMounted();
   const { items, clear, coupon: savedCoupon, setCoupon } = useCart();
@@ -107,7 +130,9 @@ export function CheckoutForm({ addresses, user }: { addresses: Address[]; user: 
     addressId !== "new" ||
     Boolean(form.fullName && form.phone && form.line1 && form.city && form.state && form.postalCode);
   const paymentDone =
-    payment === "COD" || (card.number.replace(/\D/g, "").length >= 13 && card.expiry.length === 5 && card.cvc.length >= 3 && Boolean(card.name));
+    payment === "COD" ||
+    (stripeKey ? stripeComplete : false) ||
+    (!stripeKey && card.number.replace(/\D/g, "").length >= 13 && card.expiry.length === 5 && card.cvc.length >= 3 && Boolean(card.name));
 
   const applyCoupon = (value = code) =>
     startCheck(async () => {
@@ -137,22 +162,77 @@ export function CheckoutForm({ addresses, user }: { addresses: Address[]; user: 
             postalCode: saved.postalCode,
             country: saved.country,
           };
+    const input: PlaceOrderInput = {
+      items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
+      address,
+      saveAddress: addressId === "new" && saveAddress,
+      paymentMethod: payment,
+      card: payment === "CARD" && !stripeKey ? card : undefined,
+      coupon: coupon?.code ?? null,
+      notes: notes || undefined,
+      currency,
+    };
     start(async () => {
-      const res = await placeOrder({
-        items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
-        address,
-        saveAddress: addressId === "new" && saveAddress,
-        paymentMethod: payment,
-        card: payment === "CARD" ? card : undefined,
-        coupon: coupon?.code ?? null,
-        notes: notes || undefined,
-        currency,
-      });
+      if (payment === "CARD" && stripeKey) {
+        const paid = await payWithStripe(input);
+        if (!paid) return;
+        input.paymentIntentId = paid;
+      }
+      const res = await placeOrder(input);
       if (res.ok) {
+        try {
+          sessionStorage.removeItem(PENDING_ORDER_KEY);
+        } catch {}
         clear();
         router.push(`/order-success/${res.data.orderNumber}`);
       } else toast.error(res.error);
     });
+  };
+
+  /** Confirms the payment with Stripe (3-D Secure included). Returns the paid intent id, or null. */
+  const payWithStripe = async (input: PlaceOrderInput): Promise<string | null> => {
+    const s = stripeRef.current;
+    if (!s) {
+      toast.error("The payment form is still loading, please try again");
+      return null;
+    }
+    const checked = await s.elements.submit();
+    if (checked.error) {
+      toast.error(checked.error.message ?? "Please check your payment details");
+      return null;
+    }
+    const intent = await createPaymentIntent({
+      items: input.items,
+      coupon: input.coupon,
+      currency,
+      paymentIntentId: intentRef.current,
+    });
+    if (!intent.ok) {
+      toast.error(intent.error);
+      return null;
+    }
+    intentRef.current = intent.data.paymentIntentId;
+    try {
+      // some methods (Klarna, bank apps) leave the site; /checkout/complete finishes the order on return
+      sessionStorage.setItem(PENDING_ORDER_KEY, JSON.stringify({ ...input, paymentIntentId: intent.data.paymentIntentId }));
+    } catch {}
+    const { error, paymentIntent } = await s.stripe.confirmPayment({
+      elements: s.elements,
+      clientSecret: intent.data.clientSecret,
+      confirmParams: { return_url: `${window.location.origin}/checkout/complete` },
+      redirect: "if_required",
+    });
+    if (error) {
+      toast.error(error.message ?? "Your payment could not be completed");
+      return null;
+    }
+    if (paymentIntent?.status === "succeeded") return paymentIntent.id;
+    if (paymentIntent?.status === "processing") {
+      toast.info("Your bank is still processing this payment. Please don't pay again; we'll be in touch.");
+      return null;
+    }
+    toast.error("Your payment was not completed");
+    return null;
   };
 
   const set = (k: keyof AddressInput) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -191,6 +271,8 @@ export function CheckoutForm({ addresses, user }: { addresses: Address[]; user: 
           <Progress steps={["Bag", "Shipping", "Payment", "Done"]} current={1 + Number(addressDone) + Number(addressDone && paymentDone)} />
         </div>
 
+        <Wrap stripeKey={stripeKey} amount={Math.round(totals.total * rates[currency])} currency={currency}>
+        {stripeKey && <StripeBridge onReady={onStripeReady} />}
         <form
           className="mt-10 grid items-start gap-8 lg:grid-cols-[1fr_420px] xl:gap-10"
           onSubmit={(e) => {
@@ -267,7 +349,7 @@ export function CheckoutForm({ addresses, user }: { addresses: Address[]; user: 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Choice active={payment === "CARD"} onClick={() => setPayment("CARD")}>
                   <span className="grid size-10 place-items-center rounded-xl bg-sand"><CreditCard className="size-5" /></span>
-                  <p className="mt-3 font-medium">Credit / debit card</p>
+                  <p className="mt-3 font-medium">{stripeKey ? "Card & more" : "Credit / debit card"}</p>
                   <div className="mt-2 flex gap-1.5">
                     {["VISA", "MC", "AMEX"].map((b) => (
                       <span key={b} className="rounded-md border border-line bg-white px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-ink-soft">{b}</span>
@@ -282,7 +364,31 @@ export function CheckoutForm({ addresses, user }: { addresses: Address[]; user: 
               </div>
 
               <AnimatePresence initial={false} mode="popLayout">
-                {payment === "CARD" ? (
+                {payment === "CARD" && stripeKey ? (
+                  <motion.div
+                    key="stripe"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.45, ease }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-6 p-0.5">
+                      <StripePaymentFields onComplete={setStripeComplete} />
+                    </div>
+                    {stripeKey.startsWith("pk_test_") ? (
+                      <p className="mt-5 flex items-start gap-2 rounded-2xl bg-amber/10 px-4 py-3 text-xs text-[#7a4a00]">
+                        <ShieldCheck className="mt-px size-4 shrink-0" />
+                        Stripe test mode: no real money moves. Use card 4242 4242 4242 4242 with any future date and any CVC.
+                        4000 0027 6000 3184 shows a 3-D Secure check; 4000 0000 0000 0002 is declined.
+                      </p>
+                    ) : (
+                      <p className="mt-5 flex items-center gap-2 text-xs text-mute">
+                        <Lock className="size-3.5 shrink-0" /> Payments are processed securely by Stripe. We never see or store your card number.
+                      </p>
+                    )}
+                  </motion.div>
+                ) : payment === "CARD" ? (
                   <motion.div
                     key="card"
                     initial={{ height: 0, opacity: 0 }}
@@ -566,8 +672,28 @@ export function CheckoutForm({ addresses, user }: { addresses: Address[]; user: 
             </div>
           </div>
         </form>
+        </Wrap>
       </div>
     </div>
+  );
+}
+
+function Wrap({
+  stripeKey,
+  amount,
+  currency,
+  children,
+}: {
+  stripeKey: string | null;
+  amount: number;
+  currency: string;
+  children: React.ReactNode;
+}) {
+  if (!stripeKey) return <>{children}</>;
+  return (
+    <StripeElements publishableKey={stripeKey} amount={amount} currency={currency}>
+      {children}
+    </StripeElements>
   );
 }
 
