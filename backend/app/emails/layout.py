@@ -34,7 +34,7 @@ COMPANY = "Zoiko Healthcare Inc."
 ADDRESS = "1401 21st Street, Suite R, Sacramento, CA 95811, USA"
 SUPPORT = "support@dermisque.com"
 SOCIALS = [
-    ("Instagram", "https://www.instagram.com/dermisque_official/"),
+    ("Instagram", "https://www.instagram.com/official2dermisque/"),
     ("Facebook", "https://www.facebook.com/Dermisque/"),
     ("Pinterest", "https://www.pinterest.co.uk/dermisque/"),
     ("YouTube", "https://www.youtube.com/@Dermisque"),
