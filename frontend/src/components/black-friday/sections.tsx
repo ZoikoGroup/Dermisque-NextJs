@@ -222,7 +222,7 @@ export function OfferTerms({ data }: { data: BlackFriday }) {
         <Reveal>
           <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-[#b8862f]">Offer terms</p>
           <h2 className="mt-3 font-display text-4xl leading-tight">Clear terms, before you buy.</h2>
-          <p className="mt-3 text-sm text-mute">Every condition of the Black Friday offer, in plain English.</p>
+          <p className="mt-3 text-sm text-mute">Every condition of the Black Friday offer.</p>
           <p className="mt-6 text-xs text-mute">
             Questions? Email{" "}
             <a href={`mailto:${site.email}`} className="underline underline-offset-2">
