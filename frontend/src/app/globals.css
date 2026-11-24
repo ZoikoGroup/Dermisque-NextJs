@@ -297,3 +297,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .bf-rise, .bf-float { animation: none; }
 }
+
+/* Stripe's secure card fields reuse the .input look */
+.input.StripeElement--focus {
+  border-color: #ffb300;
+  box-shadow: 0 0 0 4px rgba(255, 179, 0, 0.15);
+}
+.input.StripeElement--invalid {
+  border-color: #e5484d;
+}

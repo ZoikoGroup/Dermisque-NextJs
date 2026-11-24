@@ -26,16 +26,22 @@ import {
   Tag,
   Truck,
   User,
+  Wallet,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createPaymentIntent, placeOrder, validateCoupon, type PlaceOrderInput } from "@/app/actions/store";
 import {
+  CardElements,
+  EMPTY_CARD,
   PENDING_ORDER_KEY,
   StripeBridge,
+  StripeCardFields,
   StripeElements,
   StripePaymentFields,
+  type CardState,
   type PaymentConfig,
+  type StripeCard,
 } from "@/components/checkout/stripe-payment";
 import type { Stripe, StripeElements as StripeElementsInstance } from "@stripe/stripe-js";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -87,6 +93,12 @@ export function CheckoutForm({
   }, []);
   const intentRef = useRef<string | null>(null);
   const [stripeComplete, setStripeComplete] = useState(false);
+  // secure Stripe card fields: we only ever learn the brand, completeness, and (once complete) last 4 + expiry
+  const cardRef = useRef<StripeCard | null>(null);
+  const onCardReady = useCallback((c: StripeCard | null) => {
+    cardRef.current = c;
+  }, []);
+  const [sCard, setSCard] = useState<CardState>(EMPTY_CARD);
   const router = useRouter();
   const mounted = useMounted();
   const { items, clear, coupon: savedCoupon, setCoupon } = useCart();
@@ -96,7 +108,7 @@ export function CheckoutForm({
   const [addressId, setAddressId] = useState<string | "new">(def?.id ?? "new");
   const [form, setForm] = useState<AddressInput>(emptyAddress(user.name, user.phone));
   const [saveAddress, setSaveAddress] = useState(addresses.length === 0);
-  const [payment, setPayment] = useState<"CARD" | "COD">("CARD");
+  const [payment, setPayment] = useState<"CARD" | "OTHER" | "COD">("CARD");
   const [card, setCard] = useState({ number: "", expiry: "", cvc: "", name: user.name });
   const [flipped, setFlipped] = useState(false);
   const [notes, setNotes] = useState("");
@@ -131,7 +143,8 @@ export function CheckoutForm({
     Boolean(form.fullName && form.phone && form.line1 && form.city && form.state && form.postalCode);
   const paymentDone =
     payment === "COD" ||
-    (stripeKey ? stripeComplete : false) ||
+    (stripeKey && payment === "OTHER" && stripeComplete) ||
+    (stripeKey && payment === "CARD" && sCard.number && sCard.expiry && sCard.cvc && Boolean(card.name.trim())) ||
     (!stripeKey && card.number.replace(/\D/g, "").length >= 13 && card.expiry.length === 5 && card.cvc.length >= 3 && Boolean(card.name));
 
   const applyCoupon = (value = code) =>
@@ -166,15 +179,15 @@ export function CheckoutForm({
       items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
       address,
       saveAddress: addressId === "new" && saveAddress,
-      paymentMethod: payment,
+      paymentMethod: payment === "COD" ? "COD" : "CARD",
       card: payment === "CARD" && !stripeKey ? card : undefined,
       coupon: coupon?.code ?? null,
       notes: notes || undefined,
       currency,
     };
     start(async () => {
-      if (payment === "CARD" && stripeKey) {
-        const paid = await payWithStripe(input);
+      if (payment !== "COD" && stripeKey) {
+        const paid = payment === "CARD" ? await payWithCard(input) : await payWithStripe(input);
         if (!paid) return;
         input.paymentIntentId = paid;
       }
@@ -201,6 +214,27 @@ export function CheckoutForm({
       toast.error(checked.error.message ?? "Please check your payment details");
       return null;
     }
+    const intent = await openIntent(input);
+    if (!intent) return null;
+    try {
+      // some methods (Klarna, bank apps) leave the site; /checkout/complete finishes the order on return
+      sessionStorage.setItem(PENDING_ORDER_KEY, JSON.stringify({ ...input, paymentIntentId: intent.paymentIntentId }));
+    } catch {}
+    const { error, paymentIntent } = await s.stripe.confirmPayment({
+      elements: s.elements,
+      clientSecret: intent.clientSecret,
+      confirmParams: { return_url: `${window.location.origin}/checkout/complete` },
+      redirect: "if_required",
+    });
+    if (error) {
+      toast.error(error.message ?? "Your payment could not be completed");
+      return null;
+    }
+    return paidId(paymentIntent);
+  };
+
+  /** Prices the bag on the server and returns the PaymentIntent to confirm. */
+  const openIntent = async (input: PlaceOrderInput) => {
     const intent = await createPaymentIntent({
       items: input.items,
       coupon: input.coupon,
@@ -212,22 +246,12 @@ export function CheckoutForm({
       return null;
     }
     intentRef.current = intent.data.paymentIntentId;
-    try {
-      // some methods (Klarna, bank apps) leave the site; /checkout/complete finishes the order on return
-      sessionStorage.setItem(PENDING_ORDER_KEY, JSON.stringify({ ...input, paymentIntentId: intent.data.paymentIntentId }));
-    } catch {}
-    const { error, paymentIntent } = await s.stripe.confirmPayment({
-      elements: s.elements,
-      clientSecret: intent.data.clientSecret,
-      confirmParams: { return_url: `${window.location.origin}/checkout/complete` },
-      redirect: "if_required",
-    });
-    if (error) {
-      toast.error(error.message ?? "Your payment could not be completed");
-      return null;
-    }
-    if (paymentIntent?.status === "succeeded") return paymentIntent.id;
-    if (paymentIntent?.status === "processing") {
+    return intent.data;
+  };
+
+  const paidId = (pi: { id: string; status: string } | undefined) => {
+    if (pi?.status === "succeeded") return pi.id;
+    if (pi?.status === "processing") {
       toast.info("Your bank is still processing this payment. Please don't pay again; we'll be in touch.");
       return null;
     }
@@ -235,10 +259,42 @@ export function CheckoutForm({
     return null;
   };
 
+  /** Pays with the animated card form (Stripe card fields); 3-D Secure opens in Stripe's popup. */
+  const payWithCard = async (input: PlaceOrderInput): Promise<string | null> => {
+    const c = cardRef.current;
+    if (!c) {
+      toast.error("The card form is still loading, please try again");
+      return null;
+    }
+    if (!card.name.trim()) {
+      toast.error("Please enter the name on the card");
+      return null;
+    }
+    const pm = await c.stripe.createPaymentMethod({
+      type: "card",
+      card: c.number,
+      billing_details: { name: card.name.trim(), address: { postal_code: input.address.postalCode } },
+    });
+    if (pm.error) {
+      toast.error(pm.error.message ?? "Please check your card details");
+      return null;
+    }
+    const intent = await openIntent(input);
+    if (!intent) return null;
+    const { error, paymentIntent } = await c.stripe.confirmCardPayment(intent.clientSecret, {
+      payment_method: pm.paymentMethod.id,
+    });
+    if (error) {
+      toast.error(error.message ?? "Your card was not charged");
+      return null;
+    }
+    return paidId(paymentIntent);
+  };
+
   const set = (k: keyof AddressInput) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const payLabel = payment === "CARD" ? `Pay ${formatPrice(totals.total)}` : "Place order";
+  const payLabel = payment !== "COD" ? `Pay ${formatPrice(totals.total)}` : "Place order";
   const brand = cardBrand(card.number);
 
   return (
@@ -346,16 +402,23 @@ export function CheckoutForm({
 
             {/* 2. Payment */}
             <Step n={2} title="Payment" sub="All transactions are secure and encrypted." icon={CreditCard} done={paymentDone}>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className={cn("grid gap-3", stripeKey ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
                 <Choice active={payment === "CARD"} onClick={() => setPayment("CARD")}>
                   <span className="grid size-10 place-items-center rounded-xl bg-sand"><CreditCard className="size-5" /></span>
-                  <p className="mt-3 font-medium">{stripeKey ? "Card & more" : "Credit / debit card"}</p>
+                  <p className="mt-3 font-medium">Credit / debit card</p>
                   <div className="mt-2 flex gap-1.5">
                     {["VISA", "MC", "AMEX"].map((b) => (
                       <span key={b} className="rounded-md border border-line bg-white px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-ink-soft">{b}</span>
                     ))}
                   </div>
                 </Choice>
+                {stripeKey && (
+                  <Choice active={payment === "OTHER"} onClick={() => setPayment("OTHER")}>
+                    <span className="grid size-10 place-items-center rounded-xl bg-sand"><Wallet className="size-5" /></span>
+                    <p className="mt-3 font-medium">Other ways to pay</p>
+                    <p className="mt-1 text-sm text-ink-soft">Klarna, Amazon Pay, Cash App &amp; bank</p>
+                  </Choice>
+                )}
                 <Choice active={payment === "COD"} onClick={() => setPayment("COD")}>
                   <span className="grid size-10 place-items-center rounded-xl bg-sand"><Banknote className="size-5" /></span>
                   <p className="mt-3 font-medium">Cash on delivery</p>
@@ -365,6 +428,52 @@ export function CheckoutForm({
 
               <AnimatePresence initial={false} mode="popLayout">
                 {payment === "CARD" && stripeKey ? (
+                  <motion.div
+                    key="stripe-card"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.45, ease }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-6 grid items-center gap-6 md:grid-cols-[minmax(0,300px)_1fr]">
+                      <CardPreview
+                        brand={sCard.brand}
+                        flipped={flipped}
+                        typing={sCard.started && !sCard.last4}
+                        view={{
+                          number: sCard.last4 ? `•••• •••• •••• ${sCard.last4}` : "•••• •••• •••• ••••",
+                          name: card.name,
+                          expiry: sCard.exp ?? (sCard.expiry ? "••/••" : "MM/YY"),
+                          cvc: sCard.cvc ? "•••" : "CVC",
+                        }}
+                      />
+                      <CardElements publishableKey={stripeKey}>
+                        <StripeCardFields
+                          onReady={onCardReady}
+                          onChange={setSCard}
+                          onCvcFocus={setFlipped}
+                          field={(label, icon, el, wide) => (
+                            <Field label={label} icon={icon === "card" ? CreditCard : icon === "date" ? Hash : Lock} wide={wide}>
+                              {el}
+                            </Field>
+                          )}
+                          nameField={
+                            <Field label="Name on card" icon={User} wide>
+                              <input
+                                className="input"
+                                autoComplete="cc-name"
+                                value={card.name}
+                                onChange={(e) => setCard((c) => ({ ...c, name: e.target.value }))}
+                              />
+                            </Field>
+                          }
+                        />
+                      </CardElements>
+                    </div>
+                    <StripeNote testMode={stripeKey.startsWith("pk_test_")} />
+                  </motion.div>
+                ) : payment === "OTHER" && stripeKey ? (
                   <motion.div
                     key="stripe"
                     initial={{ height: 0, opacity: 0 }}
@@ -376,17 +485,7 @@ export function CheckoutForm({
                     <div className="mt-6 p-0.5">
                       <StripePaymentFields onComplete={setStripeComplete} />
                     </div>
-                    {stripeKey.startsWith("pk_test_") ? (
-                      <p className="mt-5 flex items-start gap-2 rounded-2xl bg-amber/10 px-4 py-3 text-xs text-[#7a4a00]">
-                        <ShieldCheck className="mt-px size-4 shrink-0" />
-                        Stripe test mode: no real money moves. Use card 4242 4242 4242 4242 with any future date and any CVC.
-                        4000 0027 6000 3184 shows a 3-D Secure check; 4000 0000 0000 0002 is declined.
-                      </p>
-                    ) : (
-                      <p className="mt-5 flex items-center gap-2 text-xs text-mute">
-                        <Lock className="size-3.5 shrink-0" /> Payments are processed securely by Stripe. We never see or store your card number.
-                      </p>
-                    )}
+                    <StripeNote testMode={stripeKey.startsWith("pk_test_")} />
                   </motion.div>
                 ) : payment === "CARD" ? (
                   <motion.div
@@ -398,7 +497,16 @@ export function CheckoutForm({
                     className="overflow-hidden"
                   >
                     <div className="mt-6 grid items-center gap-6 md:grid-cols-[minmax(0,300px)_1fr]">
-                      <CardPreview card={card} brand={brand} flipped={flipped} />
+                      <CardPreview
+                        brand={brand}
+                        flipped={flipped}
+                        view={{
+                          number: card.number.replace(/\D/g, "").padEnd(16, "•").slice(0, 16).replace(/(.{4})/g, "$1 ").trim(),
+                          name: card.name,
+                          expiry: card.expiry || "MM/YY",
+                          cvc: card.cvc.replace(/./g, "•") || "CVC",
+                        }}
+                      />
                       <div className="grid gap-4 p-0.5 sm:grid-cols-2">
                         <Field label="Card number" icon={CreditCard} wide>
                           <input
@@ -743,9 +851,42 @@ function Progress({ steps, current }: { steps: string[]; current: number }) {
   );
 }
 
-function CardPreview({ card, brand, flipped }: { card: { number: string; expiry: string; cvc: string; name: string }; brand: string; flipped: boolean }) {
-  const digits = card.number.replace(/\D/g, "").padEnd(16, "•");
-  const shown = digits.slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+const BRAND_THEME: Record<string, { bg: string; a: string; b: string }> = {
+  VISA: { bg: "#14206b", a: "rgba(80,120,255,0.65)", b: "rgba(255,190,60,0.45)" },
+  Mastercard: { bg: "#1b1b1f", a: "rgba(255,95,0,0.7)", b: "rgba(235,0,27,0.5)" },
+  AMEX: { bg: "#0d5c63", a: "rgba(70,200,210,0.6)", b: "rgba(255,255,255,0.25)" },
+  Discover: { bg: "#2a1d12", a: "rgba(255,120,0,0.65)", b: "rgba(255,200,120,0.35)" },
+};
+const DEFAULT_THEME = { bg: "#0b0b0f", a: "rgba(255,122,0,0.6)", b: "rgba(22,179,196,0.5)" };
+
+function BrandLogo({ brand }: { brand: string }) {
+  if (brand === "Mastercard")
+    return (
+      <svg viewBox="0 0 48 30" className="h-8 w-auto" aria-label="Mastercard">
+        <circle cx="17" cy="15" r="12" fill="#eb001b" />
+        <circle cx="31" cy="15" r="12" fill="#f79e1b" fillOpacity="0.9" />
+        <path d="M24 5.4a12 12 0 0 1 0 19.2 12 12 0 0 1 0-19.2Z" fill="#ff5f00" />
+      </svg>
+    );
+  if (brand === "VISA") return <span className="font-sans text-2xl font-black italic tracking-tight">VISA</span>;
+  if (brand === "AMEX")
+    return <span className="rounded bg-white/90 px-1.5 py-0.5 text-xs font-black tracking-wider text-[#0d5c63]">AMEX</span>;
+  if (brand) return <span className="text-sm font-bold italic tracking-wider">{brand}</span>;
+  return <span className="text-sm font-bold italic tracking-wider">DΣRMISQUΣ</span>;
+}
+
+function CardPreview({
+  view,
+  brand,
+  flipped,
+  typing,
+}: {
+  view: { number: string; name: string; expiry: string; cvc: string };
+  brand: string;
+  flipped: boolean;
+  typing?: boolean;
+}) {
+  const t = BRAND_THEME[brand] ?? DEFAULT_THEME;
   return (
     <div className="mx-auto w-full max-w-[300px] [perspective:1200px]">
       <motion.div
@@ -754,9 +895,13 @@ function CardPreview({ card, brand, flipped }: { card: { number: string; expiry:
         className="relative aspect-[1.586] w-full [transform-style:preserve-3d]"
       >
         {/* front */}
-        <div className="absolute inset-0 overflow-hidden rounded-2xl bg-ink p-5 text-white shadow-[0_25px_50px_-20px_rgba(11,11,15,0.6)] [backface-visibility:hidden]">
-          <div aria-hidden className="absolute -right-10 -top-16 size-48 rounded-full bg-sun/60 blur-3xl" />
-          <div aria-hidden className="absolute -bottom-20 -left-10 size-48 rounded-full bg-aqua/50 blur-3xl" />
+        <motion.div
+          animate={{ backgroundColor: t.bg }}
+          transition={{ duration: 0.6, ease }}
+          className="absolute inset-0 overflow-hidden rounded-2xl p-5 text-white shadow-[0_25px_50px_-20px_rgba(11,11,15,0.6)] [backface-visibility:hidden]"
+        >
+          <motion.div aria-hidden animate={{ backgroundColor: t.a }} className="absolute -right-10 -top-16 size-48 rounded-full blur-3xl" />
+          <motion.div aria-hidden animate={{ backgroundColor: t.b }} className="absolute -bottom-20 -left-10 size-48 rounded-full blur-3xl" />
           <span aria-hidden className="absolute -bottom-6 right-3 font-display text-[7rem] leading-none text-white/[0.07]">Σ</span>
           <div className="relative flex h-full flex-col justify-between">
             <div className="flex items-start justify-between">
@@ -764,38 +909,67 @@ function CardPreview({ card, brand, flipped }: { card: { number: string; expiry:
               <AnimatePresence mode="wait">
                 <motion.span
                   key={brand || "none"}
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  className="text-sm font-bold italic tracking-wider"
+                  initial={{ opacity: 0, y: -8, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.8 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex h-8 items-center"
                 >
-                  {brand || "DΣRMISQUΣ"}
+                  <BrandLogo brand={brand} />
                 </motion.span>
               </AnimatePresence>
             </div>
-            <p className="font-mono text-[1.05rem] tracking-[0.12em]">{shown}</p>
+            <p className={cn("font-mono text-[1.05rem] tracking-[0.12em]", typing && "animate-pulse")}>
+              {view.number.slice(0, -4)}
+              <motion.span
+                key={view.number.slice(-4)}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+                className="inline-block"
+              >
+                {view.number.slice(-4)}
+              </motion.span>
+            </p>
             <div className="flex items-end justify-between text-[10px] uppercase tracking-wider">
               <div className="min-w-0">
                 <p className="text-white/50">Card holder</p>
-                <p className="mt-0.5 truncate text-xs">{card.name || "Your name"}</p>
+                <p className="mt-0.5 truncate text-xs">{view.name || "Your name"}</p>
               </div>
               <div className="text-right">
                 <p className="text-white/50">Expires</p>
-                <p className="mt-0.5 font-mono text-xs">{card.expiry || "MM/YY"}</p>
+                <p className="mt-0.5 font-mono text-xs">{view.expiry}</p>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
         {/* back */}
-        <div className="absolute inset-0 overflow-hidden rounded-2xl bg-ink text-white shadow-[0_25px_50px_-20px_rgba(11,11,15,0.6)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+        <motion.div
+          animate={{ backgroundColor: t.bg }}
+          className="absolute inset-0 overflow-hidden rounded-2xl text-white shadow-[0_25px_50px_-20px_rgba(11,11,15,0.6)] [backface-visibility:hidden] [transform:rotateY(180deg)]"
+        >
           <div className="mt-6 h-10 bg-black/80" />
           <div className="mx-5 mt-5 flex items-center justify-end rounded-md bg-white/90 px-3 py-2 font-mono text-sm text-ink">
-            {card.cvc.replace(/./g, "•") || "CVC"}
+            {view.cvc}
           </div>
           <p className="mx-5 mt-4 text-[10px] text-white/50">The 3–4 digit security code on the back of your card.</p>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
+  );
+}
+
+function StripeNote({ testMode }: { testMode: boolean }) {
+  return testMode ? (
+    <p className="mt-5 flex items-start gap-2 rounded-2xl bg-amber/10 px-4 py-3 text-xs text-[#7a4a00]">
+      <ShieldCheck className="mt-px size-4 shrink-0" />
+      Stripe test mode: no real money moves. Use card 4242 4242 4242 4242 (Visa) or 5555 5555 5555 4444 (Mastercard) with any
+      future date and any CVC. 4000 0027 6000 3184 shows a 3-D Secure check; 4000 0000 0000 0002 is declined.
+    </p>
+  ) : (
+    <p className="mt-5 flex items-center gap-2 text-xs text-mute">
+      <Lock className="size-3.5 shrink-0" /> Card details go straight to Stripe over an encrypted connection. We never see or store your card number.
+    </p>
   );
 }
 
