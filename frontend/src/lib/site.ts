@@ -27,7 +27,7 @@ export const site = {
   ],
   socials: [
     { name: "Facebook", href: "https://www.facebook.com/Dermisque/" },
-    { name: "Instagram", href: "https://www.instagram.com/dermisque_official/" },
+    { name: "Instagram", href: "https://www.instagram.com/official2dermisque/" },
     { name: "X", href: "https://x.com/dermisque" },
     { name: "Pinterest", href: "https://www.pinterest.co.uk/dermisque/" },
     { name: "LinkedIn", href: "https://www.linkedin.com/company/dermisque/" },
