@@ -156,7 +156,7 @@ export function CountdownSection({ data }: { data: BlackFriday }) {
       <div className="relative mx-auto max-w-3xl text-center">
         <h2 className="font-display text-3xl sm:text-5xl">Black Friday to Cyber Monday</h2>
         <p className="mt-3 text-sm text-white/70">
-          {data.live ? `Live now · ends ${saleDate(data.endsAt)}, 23:59 EST` : `Starts ${saleDate(data.startsAt)}`}
+          {data.live ? `Live now · ends ${saleDate(data.endsAt)}, 11:59 PM EST` : `Starts ${saleDate(data.startsAt)}`}
         </p>
         <CountdownBoxes startsAt={data.startsAt} endsAt={data.endsAt} className="mx-auto mt-8 max-w-xl" />
         <p className="mt-6 text-[0.72rem] text-white/50">
@@ -170,7 +170,7 @@ export function CountdownSection({ data }: { data: BlackFriday }) {
 /* ───────────── Offer terms ───────────── */
 export function OfferTerms({ data }: { data: BlackFriday }) {
   const rows: [string, React.ReactNode][] = [
-    ["Offer dates", `${saleDay(data.startsAt)} – ${saleDate(data.endsAt)}. The sale ends at 23:59 EST on Cyber Monday.`],
+    ["Offer dates", `${saleDay(data.startsAt)} – ${saleDate(data.endsAt)}. The sale ends at 11:59 PM EST on Cyber Monday.`],
     ["Prices", "Shown in your selected currency and include taxes. The price in your basket is the price you pay."],
     [
       "Savings",
