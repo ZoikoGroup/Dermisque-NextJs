@@ -111,14 +111,14 @@ export const bundleCartItem = (b: DealBundle): CartProduct => ({
 export const cartItemHref = (item: { id: string; slug: string }) =>
   item.id.startsWith("bundle:") ? `${BF_PATH}#combos` : `/product/${item.slug}`;
 
-const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "Europe/London" });
+const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "America/New_York" });
 const yearFmt = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
   year: "numeric",
-  timeZone: "Europe/London",
+  timeZone: "America/New_York",
 });
 /** "20 November" */
-export const ukDay = (iso: string) => dayFmt.format(new Date(iso));
+export const saleDay = (iso: string) => dayFmt.format(new Date(iso));
 /** "20 November 2026" */
-export const ukDate = (iso: string) => yearFmt.format(new Date(iso));
+export const saleDate = (iso: string) => yearFmt.format(new Date(iso));

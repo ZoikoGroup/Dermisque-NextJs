@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, X } from "lucide-react";
-import { BF_IMG, BF_PATH, campaignStatus, ukDay, type BlackFriday } from "@/lib/black-friday";
+import { BF_IMG, BF_PATH, campaignStatus, saleDay, type BlackFriday } from "@/lib/black-friday";
 import { CountdownBoxes } from "./countdown";
 import { Seal } from "./parts";
 
@@ -102,7 +102,7 @@ export function BlackFridayPopup({ campaign }: { campaign: Campaign }) {
                 </span>
               </h2>
               <p className="mt-3 text-sm text-ink-soft">
-                Black Friday to Cyber Monday, {ukDay(campaign.startsAt)} – {ukDay(campaign.endsAt)}. Giftable sets
+                Black Friday to Cyber Monday, {saleDay(campaign.startsAt)} – {saleDay(campaign.endsAt)}. Giftable sets
                 included.
               </p>
 

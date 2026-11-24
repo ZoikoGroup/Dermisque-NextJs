@@ -2,12 +2,13 @@
 
 import { motion } from "motion/react";
 import { useNow } from "@/hooks/use-now";
-import { type BlackFriday, ukDay } from "@/lib/black-friday";
+import { type BlackFriday, saleDay } from "@/lib/black-friday";
 import { cn } from "@/lib/utils";
 import { Pill } from "./parts";
 
 const DAY = 86_400_000;
-const fmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" });
+const EST = -5 * 3_600_000; // the sale runs on US Eastern time (EST in November)
+const fmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "America/New_York" });
 const label = (from: number, to: number) => {
   const a = fmt.format(from).replace(",", "");
   return (to - from > DAY ? `${a} – ${fmt.format(to - DAY).replace(",", "")}` : a).toUpperCase();
@@ -15,11 +16,7 @@ const label = (from: number, to: number) => {
 
 export function SaleWeekend({ data }: { data: BlackFriday }) {
   const now = useNow();
-  const midnight = (t: number) => {
-    const d = new Date(t);
-    d.setUTCHours(0, 0, 0, 0);
-    return d.getTime();
-  };
+  const midnight = (t: number) => Math.floor((t + EST) / DAY) * DAY - EST; // start of that day in EST
   const open = midnight(Date.parse(data.startsAt));
   const close = midnight(Date.parse(data.endsAt)) + DAY; // the sale runs to the end of its last day
   const friday = close - 4 * DAY; // Black Friday is the campaign's final Friday
@@ -48,7 +45,7 @@ export function SaleWeekend({ data }: { data: BlackFriday }) {
           {totalDays} days. <span className="text-[#c9a227]">One big saving.</span>
         </h2>
         <p className="mt-3 text-sm text-mute">
-          The same Black Friday prices run from {ukDay(data.startsAt)} through Cyber Monday, {ukDay(data.endsAt)}.
+          The same Black Friday prices run from {saleDay(data.startsAt)} through Cyber Monday, {saleDay(data.endsAt)}.
         </p>
       </div>
 

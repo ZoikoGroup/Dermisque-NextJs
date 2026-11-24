@@ -32,10 +32,10 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""
 
-    # ── Black Friday campaign (UK time = UTC in November) ──
+    # ── Black Friday campaign (US Eastern time: EST = UTC-5 in November) ──
     # Sale prices apply automatically between these instants; bundles can only be bought while live.
-    black_friday_start: str = "2026-11-20T00:00:00+00:00"
-    black_friday_end: str = "2026-11-30T23:59:59+00:00"
+    black_friday_start: str = "2026-11-20T00:00:00-05:00"
+    black_friday_end: str = "2026-11-30T23:59:59-05:00"
     black_friday_single_pct: int = 40
     black_friday_combo_pct: int = 45
 
