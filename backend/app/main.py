@@ -49,6 +49,9 @@ def _add_missing_columns():
             conn.execute(text("ALTER TABLE orders ADD COLUMN currency VARCHAR(3) NOT NULL DEFAULT 'USD'"))
         if "fx_rate" not in cols:
             conn.execute(text("ALTER TABLE orders ADD COLUMN fx_rate FLOAT NOT NULL DEFAULT 1"))
+        if "payment_ref" not in cols:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN payment_ref VARCHAR(64)"))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_payment_ref ON orders (payment_ref)"))
         if "details" not in {c["name"] for c in inspect(engine).get_columns("messages")}:
             conn.execute(text("ALTER TABLE messages ADD COLUMN details JSON"))
 

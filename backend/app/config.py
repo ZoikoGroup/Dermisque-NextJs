@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     # Display / checkout currencies. Prices are stored in USD; other currencies use a fixed rate.
     gbp_rate: float = 0.79  # 1 USD = 0.79 GBP
 
+    # ── Card payments (Stripe) ──
+    # With both keys set, card payments go through Stripe; without them checkout uses the demo processor.
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+
     # ── Black Friday campaign (UK time = UTC in November) ──
     # Sale prices apply automatically between these instants; bundles can only be bought while live.
     black_friday_start: str = "2026-11-20T00:00:00+00:00"
@@ -61,6 +66,10 @@ class Settings(BaseSettings):
     @property
     def reminder_hours(self) -> list[float]:
         return [float(h) for h in self.cart_reminder_hours.split(",") if h.strip()]
+
+    @property
+    def stripe_enabled(self) -> bool:
+        return bool(self.stripe_secret_key and self.stripe_publishable_key)
 
     @property
     def smtp_configured(self) -> bool:

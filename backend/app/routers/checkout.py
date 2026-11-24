@@ -9,13 +9,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from .. import promo
+from .. import payments, promo
+from ..config import settings
 from ..currency import rates
 from ..database import get_db
 from ..emails import notify
 from ..models import Address, Cart, Coupon, Order, OrderItem, Product, User
 from ..pricing import CouponError, compute_totals, find_valid_coupon
-from ..schemas import CardIn, CheckoutIn, CouponApplied, CouponCheckIn, OrderOut
+from ..schemas import (
+    CardIn, CartLine, CheckoutIn, CouponApplied, CouponCheckIn, OrderOut, PaymentIntentIn, PaymentIntentOut,
+)
 from ..security import get_current_user, get_optional_user
 from ..serializers import order_out
 
@@ -37,7 +40,7 @@ DECLINES = {"Your card was declined", "This card has expired"}
 
 
 def charge_card(card: CardIn) -> str | None:
-    """Demo payment processor — swap for Stripe/PayPal in production.
+    """Demo payment processor, used only when Stripe keys are not configured.
     Card 4000 0000 0000 0002 simulates a decline."""
     digits = re.sub(r"\D", "", card.number)
     if not 13 <= len(digits) <= 19:
@@ -72,11 +75,27 @@ def _order_number() -> str:
     return f"DQ-{t}{secrets.token_hex(2).upper()}"
 
 
-@router.post("/orders", response_model=OrderOut, status_code=201)
-def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Merge duplicate lines and re-price everything from the database (incl. live campaign prices).
+@router.get("/payment-config")
+def payment_config():
+    """Tells the storefront which card processor to show. The publishable key is public by design."""
+    if settings.stripe_enabled:
+        return {"provider": "stripe", "publishableKey": settings.stripe_publishable_key}
+    return {"provider": "demo", "publishableKey": None}
+
+
+@dataclass
+class PricedCart:
+    lines: list[tuple[PricedLine, int]]
+    need: dict[str, int]  # product id -> units to take from stock
+    by_id: dict[str, Product]
+    coupon: Coupon | None
+    totals: dict
+
+
+def _price_cart(db: Session, items: list[CartLine], user_id: str, coupon_code: str | None) -> PricedCart:
+    """Merge duplicate lines and re-price everything from the database (incl. live campaign prices)."""
     qty: dict[str, int] = {}
-    for line in body.items:
+    for line in items:
         qty[line.id] = qty.get(line.id, 0) + line.quantity
     bundle_qty = {k[len(promo.BUNDLE_PREFIX):]: q for k, q in qty.items() if promo.is_bundle_id(k)}
     prod_qty = {k: q for k, q in qty.items() if not promo.is_bundle_id(k)}
@@ -86,7 +105,7 @@ def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Se
         for p in db.scalars(select(Product).where(Product.id.in_(prod_qty), Product.is_active.is_(True))).all()
     }
     bundles = promo.resolve(db, list(bundle_qty)) if bundle_qty else {}
-    need: dict[str, int] = {}  # product id -> units to take from stock
+    need: dict[str, int] = {}
     by_id: dict[str, Product] = {}
     priced: list[tuple[PricedLine, int]] = []  # what the customer sees on the receipt
     for pid, q in prod_qty.items():
@@ -110,18 +129,52 @@ def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Se
         p = by_id[pid]
         if p.stock < q:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Only {p.stock} left of {p.name}")
-    lines = priced
-    subtotal = sum(line.price * q for line, q in lines)
+    subtotal = sum(line.price * q for line, q in priced)
 
     coupon: Coupon | None = None
-    if body.coupon:
+    if coupon_code:
         try:
-            coupon = find_valid_coupon(db, body.coupon, subtotal, user.id)
+            coupon = find_valid_coupon(db, coupon_code, subtotal, user_id)
         except CouponError as e:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
-    totals = compute_totals(subtotal, coupon)
+    return PricedCart(priced, need, by_id, coupon, compute_totals(subtotal, coupon))
 
-    if body.payment_method == "CARD":
+
+@router.post("/payment-intent", response_model=PaymentIntentOut)
+def create_payment_intent(
+    body: PaymentIntentIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Prices the bag on the server and opens (or re-prices) a Stripe PaymentIntent for it."""
+    if not settings.stripe_enabled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Card payments are not set up")
+    cart = _price_cart(db, body.items, user.id, body.coupon)
+    amount = payments.to_minor(cart.totals["total"], rates()[body.currency])
+    try:
+        pi = payments.open_intent(amount, body.currency, user, body.payment_intent_id)
+    except payments.PaymentError as e:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(e))
+    return PaymentIntentOut(client_secret=pi.client_secret, payment_intent_id=pi.id, amount=amount,
+                            currency=body.currency)
+
+
+@router.post("/orders", response_model=OrderOut, status_code=201)
+def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    cart = _price_cart(db, body.items, user.id, body.coupon)
+    lines, need, by_id, coupon, totals = cart.lines, cart.need, cart.by_id, cart.coupon, cart.totals
+    paid_ref: str | None = None
+
+    if body.payment_method == "CARD" and settings.stripe_enabled:
+        if not body.payment_intent_id:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Card payment is missing, please try again")
+        if db.scalar(select(Order.id).where(Order.payment_ref == body.payment_intent_id)):
+            raise HTTPException(status.HTTP_409_CONFLICT, "This payment has already been used for an order")
+        expected = payments.to_minor(totals["total"], rates()[body.currency])
+        try:
+            payments.verify_paid(body.payment_intent_id, user, expected, body.currency)
+        except payments.PaymentError as e:
+            raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(e))
+        paid_ref = body.payment_intent_id
+    elif body.payment_method == "CARD":
         if not body.card:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Card details are required")
         err = charge_card(body.card)
@@ -130,8 +183,21 @@ def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Se
                 notify.checkout_failed(user, err, lines, body.currency, rates()[body.currency], payment=True)
             raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, err)
 
-    # Atomic stock decrement guards against overselling under concurrency.
     stock_before = {pid: by_id[pid].stock for pid in need}
+    try:
+        order = _create_order(body, user, db, lines, need, by_id, coupon, totals, paid_ref)
+    except Exception:
+        if paid_ref:  # the customer was charged but no order exists: give the money back
+            db.rollback()
+            payments.refund(paid_ref)
+        raise
+    notify.order_placed(order)
+    notify.low_stock(db, list(stock_before), stock_before)
+    return order_out(order)
+
+
+def _create_order(body: CheckoutIn, user: User, db: Session, lines, need, by_id, coupon, totals, paid_ref) -> Order:
+    # Atomic stock decrement guards against overselling under concurrency.
     for pid, q in need.items():
         p = by_id[pid]
         res = db.execute(
@@ -150,6 +216,7 @@ def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Se
         status="PROCESSING" if body.payment_method == "CARD" else "PENDING",
         payment_method=body.payment_method,
         payment_status="PAID" if body.payment_method == "CARD" else "UNPAID",
+        payment_ref=paid_ref,
         coupon_code=coupon.code if coupon else None,
         currency=body.currency,
         fx_rate=rates()[body.currency],
@@ -177,6 +244,4 @@ def place_order(body: CheckoutIn, user: User = Depends(get_current_user), db: Se
     db.execute(Cart.__table__.delete().where(Cart.user_id == user.id))  # bag is now an order
     db.commit()
     db.refresh(order)
-    notify.order_placed(order)
-    notify.low_stock(db, list(stock_before), stock_before)
-    return order_out(order)
+    return order

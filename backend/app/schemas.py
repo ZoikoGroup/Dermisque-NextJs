@@ -199,9 +199,26 @@ class CheckoutIn(Schema):
     save_address: bool = False
     payment_method: Literal["CARD", "COD"]
     card: CardIn | None = None
+    # Stripe PaymentIntent the customer has already confirmed (card orders when Stripe is enabled)
+    payment_intent_id: str | None = Field(default=None, max_length=64)
     coupon: str | None = None
     notes: str | None = Field(default=None, max_length=500)
     currency: Literal["USD", "GBP"] = "USD"
+
+
+class PaymentIntentIn(Schema):
+    items: list[CartLine] = Field(min_length=1)
+    coupon: str | None = None
+    currency: Literal["USD", "GBP"] = "USD"
+    # the intent from an earlier attempt on this page; updated instead of creating a new one
+    payment_intent_id: str | None = Field(default=None, max_length=64)
+
+
+class PaymentIntentOut(Schema):
+    client_secret: str
+    payment_intent_id: str
+    amount: int  # minor units of `currency`
+    currency: str
 
 
 class OrderItemOut(Schema):
