@@ -33,7 +33,7 @@ export function SaleWeekend({ data }: { data: BlackFriday }) {
       to: friday + DAY,
     },
     { title: "Weekend sale", text: "Same Black Friday prices.", from: friday + DAY, to: friday + 3 * DAY },
-    { title: "Cyber Monday", text: "Last day. Sale ends 23:59.", from: friday + 3 * DAY, to: close },
+    { title: "Cyber Monday", text: "Last day. Sale ends 11:59 PM EST.", from: friday + 3 * DAY, to: close },
   ].map((d) => ({ ...d, start: d.from, label: label(d.from, d.to), today: now !== null && now >= d.from && now < d.to }));
   const anyToday = days.some((d) => d.today);
 
