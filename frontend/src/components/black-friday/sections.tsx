@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Plus } from "lucide-react";
 import { Reveal, Stagger, StaggerItem } from "@/components/ui/reveal";
-import { BF_IMG, ukDate, ukDay, type BlackFriday } from "@/lib/black-friday";
+import { BF_IMG, saleDate, saleDay, type BlackFriday } from "@/lib/black-friday";
 import { site } from "@/lib/site";
 import { FreeShippingText } from "@/components/store/currency-provider";
 import { CountdownBoxes } from "./countdown";
@@ -25,7 +25,7 @@ export function RitualBundle({ data }: { data: BlackFriday }) {
               </>
             ) : (
               <>
-                Bundle savings revealed <span className="text-[#e07b12]">{ukDay(data.startsAt)}</span>
+                Bundle savings revealed <span className="text-[#e07b12]">{saleDay(data.startsAt)}</span>
               </>
             )}
           </p>
@@ -156,11 +156,11 @@ export function CountdownSection({ data }: { data: BlackFriday }) {
       <div className="relative mx-auto max-w-3xl text-center">
         <h2 className="font-display text-3xl sm:text-5xl">Black Friday to Cyber Monday</h2>
         <p className="mt-3 text-sm text-white/70">
-          {data.live ? `Live now · ends ${ukDate(data.endsAt)}, 23:59 UK time` : `Starts ${ukDate(data.startsAt)}`}
+          {data.live ? `Live now · ends ${saleDate(data.endsAt)}, 23:59 EST` : `Starts ${saleDate(data.startsAt)}`}
         </p>
         <CountdownBoxes startsAt={data.startsAt} endsAt={data.endsAt} className="mx-auto mt-8 max-w-xl" />
         <p className="mt-6 text-[0.72rem] text-white/50">
-          {data.live ? "Counting down to the end of the sale" : "Counting down to the start of the sale"} (UK time).
+          {data.live ? "Counting down to the end of the sale" : "Counting down to the start of the sale"} (EST).
         </p>
       </div>
     </section>
@@ -170,7 +170,7 @@ export function CountdownSection({ data }: { data: BlackFriday }) {
 /* ───────────── Offer terms ───────────── */
 export function OfferTerms({ data }: { data: BlackFriday }) {
   const rows: [string, React.ReactNode][] = [
-    ["Offer dates", `${ukDay(data.startsAt)} – ${ukDate(data.endsAt)}. The sale ends at 23:59 UK time on Cyber Monday.`],
+    ["Offer dates", `${saleDay(data.startsAt)} – ${saleDate(data.endsAt)}. The sale ends at 23:59 EST on Cyber Monday.`],
     ["Prices", "Shown in your selected currency and include taxes. The price in your basket is the price you pay."],
     [
       "Savings",
@@ -222,7 +222,7 @@ export function OfferTerms({ data }: { data: BlackFriday }) {
         <Reveal>
           <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-[#b8862f]">Offer terms</p>
           <h2 className="mt-3 font-display text-4xl leading-tight">Clear terms, before you buy.</h2>
-          <p className="mt-3 text-sm text-mute">Every condition of the Black Friday offer, in plain English.</p>
+          <p className="mt-3 text-sm text-mute">Every condition of the Black Friday offer.</p>
           <p className="mt-6 text-xs text-mute">
             Questions? Email{" "}
             <a href={`mailto:${site.email}`} className="underline underline-offset-2">

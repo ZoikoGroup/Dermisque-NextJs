@@ -14,7 +14,7 @@ import {
   SERUM_LABEL,
   serumType,
   shortName,
-  ukDay,
+  saleDay,
   type BlackFriday,
   type SerumType,
 } from "@/lib/black-friday";
@@ -55,7 +55,7 @@ export function DealGrid({ data }: { data: BlackFriday }) {
           <p className="mx-auto mt-3 max-w-xl text-sm text-mute">
             {data.live
               ? "Every price below already includes the Black Friday discount."
-              : `Black Friday prices go live ${ukDay(data.startsAt)} — here's a preview.`}{" "}
+              : `Black Friday prices go live ${saleDay(data.startsAt)} — here's a preview.`}{" "}
             Prices in {CURRENCIES[currency].symbol} include taxes.
           </p>
 
@@ -151,7 +151,7 @@ export function DealGrid({ data }: { data: BlackFriday }) {
                             <ShoppingBag className="size-3.5" /> Add to basket
                           </>
                         ) : (
-                          `Available ${ukDay(data.startsAt)}`
+                          `Available ${saleDay(data.startsAt)}`
                         )}
                       </button>
                     </div>

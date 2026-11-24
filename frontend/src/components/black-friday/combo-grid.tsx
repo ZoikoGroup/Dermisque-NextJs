@@ -6,7 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { usePrice } from "@/components/store/currency-provider";
 import { Stagger, StaggerItem } from "@/components/ui/reveal";
-import { bundleCartItem, shortName, ukDay, type BlackFriday, type DealBundle } from "@/lib/black-friday";
+import { bundleCartItem, shortName, saleDay, type BlackFriday, type DealBundle } from "@/lib/black-friday";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/store/cart";
 import { Pill, Ribbons } from "./parts";
@@ -53,7 +53,7 @@ export function BundleButton({
           <ShoppingBag className="size-4" /> {label}
         </>
       ) : (
-        `Available ${ukDay(startsAt)}`
+        `Available ${saleDay(startsAt)}`
       )}
     </button>
   );

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { ArrowDown } from "lucide-react";
-import { BF_IMG, ukDay, type BlackFriday } from "@/lib/black-friday";
+import { BF_IMG, saleDay, type BlackFriday } from "@/lib/black-friday";
 import { Ribbons, Seal } from "./parts";
 
 export function BlackFridayHero({ data }: { data: BlackFriday }) {
@@ -78,7 +78,7 @@ export function BlackFridayHero({ data }: { data: BlackFriday }) {
       <div className="bg-ink text-white">
         <div className="mx-auto flex max-w-[1600px] flex-col items-center justify-center gap-1 px-4 py-4 text-center sm:flex-row sm:gap-4">
           <p className="font-display text-lg sm:text-xl">
-            {data.live ? `The Black Friday edit is live — until ${ukDay(data.endsAt)}` : `The Black Friday edit arrives ${ukDay(data.startsAt)}`}
+            {data.live ? `The Black Friday edit is live — until ${saleDay(data.endsAt)}` : `The Black Friday edit arrives ${saleDay(data.startsAt)}`}
           </p>
           <p className="text-xs text-white/70">Every serum, plus combos and giftable sets.</p>
         </div>
