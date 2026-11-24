@@ -42,18 +42,36 @@ async def _cart_reminder_loop():
 
 
 def _add_missing_columns():
-    """Tiny forward-only migration for columns added after a database was created."""
-    cols = {c["name"] for c in inspect(engine).get_columns("orders")}
-    with engine.begin() as conn:
-        if "currency" not in cols:
-            conn.execute(text("ALTER TABLE orders ADD COLUMN currency VARCHAR(3) NOT NULL DEFAULT 'USD'"))
-        if "fx_rate" not in cols:
-            conn.execute(text("ALTER TABLE orders ADD COLUMN fx_rate FLOAT NOT NULL DEFAULT 1"))
-        if "payment_ref" not in cols:
-            conn.execute(text("ALTER TABLE orders ADD COLUMN payment_ref VARCHAR(64)"))
-            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_payment_ref ON orders (payment_ref)"))
-        if "details" not in {c["name"] for c in inspect(engine).get_columns("messages")}:
-            conn.execute(text("ALTER TABLE messages ADD COLUMN details JSON"))
+    """Tiny forward-only migration for columns added after a database was created.
+
+    Each column is added in its own short transaction with a lock timeout, and a failure is logged instead
+    of stopping the API: a busy table (or two API processes starting together) must never keep the shop down.
+    """
+    _add_column("orders", "currency", "VARCHAR(3) NOT NULL DEFAULT 'USD'")
+    _add_column("orders", "fx_rate", "FLOAT NOT NULL DEFAULT 1")
+    _add_column(
+        "orders", "payment_ref", "VARCHAR(64)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_payment_ref ON orders (payment_ref)",
+    )
+    _add_column("messages", "details", "JSON")
+
+
+def _add_column(table: str, column: str, ddl: str, *after: str) -> None:
+    pg = engine.dialect.name == "postgresql"
+    try:
+        if column in {c["name"] for c in inspect(engine).get_columns(table)}:
+            return
+        log.info("Adding column %s.%s", table, column)
+        with engine.begin() as conn:
+            if pg:  # wait at most 10s for the table lock instead of hanging the start-up
+                conn.execute(text("SET LOCAL lock_timeout = '10s'"))
+            exists = "IF NOT EXISTS " if pg else ""
+            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {exists}{column} {ddl}"))
+            for stmt in after:
+                conn.execute(text(stmt))
+        log.info("Added column %s.%s", table, column)
+    except Exception:  # noqa: BLE001 — log it and keep the API up
+        log.exception("Could not add column %s.%s; starting without it", table, column)
 
 
 app = FastAPI(
