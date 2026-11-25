@@ -4,6 +4,7 @@ checkout and forms never wait on the mail server. Every email is recorded in `em
 import logging
 import smtplib
 import ssl
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -68,6 +69,33 @@ def _smtp_send(msg: EmailMessage) -> None:
             s.send_message(msg)
 
 
+RETRY_WAITS = (5, 30)  # seconds before the 2nd and 3rd attempt
+
+
+def _temporary(e: Exception) -> bool:
+    """Worth another try: dropped/refused connections, timeouts and 4xx "try again later" replies.
+    Wrong password (535) or a rejected address (5xx) will not fix themselves, so they fail at once."""
+    if isinstance(e, smtplib.SMTPResponseException):
+        return 400 <= e.smtp_code < 500
+    if isinstance(e, smtplib.SMTPRecipientsRefused):
+        return all(400 <= code < 500 for code, _ in e.recipients.values())
+    return isinstance(e, (smtplib.SMTPServerDisconnected, OSError))  # OSError covers timeouts and refused
+
+
+def _send_with_retry(mail: Email) -> None:
+    msg = _build(mail)
+    for attempt, wait in enumerate((*RETRY_WAITS, None), start=1):
+        try:
+            _smtp_send(msg)
+            return
+        except Exception as e:
+            if wait is None or not _temporary(e):
+                raise
+            log.warning("Email to %s failed on attempt %s (%s: %s); retrying in %ss",
+                        mail.to, attempt, type(e).__name__, e, wait)
+            time.sleep(wait)
+
+
 def _deliver(log_id: str, mail: Email) -> None:
     status, error = "SENT", None
     try:
@@ -76,17 +104,20 @@ def _deliver(log_id: str, mail: Email) -> None:
         elif not settings.smtp_configured:
             status, error = "SKIPPED", "SMTP is not configured"
         else:
-            _smtp_send(_build(mail))
+            _send_with_retry(mail)
     except Exception as e:  # noqa: BLE001 — record any delivery problem
         status, error = "FAILED", f"{type(e).__name__}: {e}"[:1000]
         log.exception("Email to %s failed (%s)", mail.to, mail.template)
-    with SessionLocal() as db:
-        row = db.get(EmailLog, log_id)
-        if row:
-            row.status, row.error = status, error
-            row.sent_at = datetime.now(timezone.utc) if status == "SENT" else None
-            db.commit()
-    log.info("Email %s → %s [%s] %s", mail.template, mail.to, status, error or "")
+    try:
+        with SessionLocal() as db:
+            row = db.get(EmailLog, log_id)
+            if row:
+                row.status, row.error = status, error
+                row.sent_at = datetime.now(timezone.utc) if status == "SENT" else None
+                db.commit()
+    except Exception:  # noqa: BLE001 — runs on the mail thread, where an error would vanish silently
+        log.exception("Could not record the result of email %s", log_id)
+    log.info("Email %s -> %s [%s] %s", mail.template, mail.to, status, error or "")
 
 
 def send(mail: Email, wait: bool = False) -> str:

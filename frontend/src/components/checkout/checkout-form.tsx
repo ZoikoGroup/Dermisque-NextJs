@@ -30,7 +30,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { createPaymentIntent, placeOrder, validateCoupon, type PlaceOrderInput } from "@/app/actions/store";
+import { createPaymentIntent, placeOrder, reportPaymentFailed, validateCoupon, type PlaceOrderInput } from "@/app/actions/store";
 import {
   CardElements,
   EMPTY_CARD,
@@ -228,6 +228,7 @@ export function CheckoutForm({
     });
     if (error) {
       toast.error(error.message ?? "Your payment could not be completed");
+      if (error.type === "card_error") declined(input, intent.paymentIntentId);
       return null;
     }
     return paidId(paymentIntent);
@@ -247,6 +248,11 @@ export function CheckoutForm({
     }
     intentRef.current = intent.data.paymentIntentId;
     return intent.data;
+  };
+
+  /** Fire-and-forget: the "payment failed" emails must never hold up the customer. */
+  const declined = (input: PlaceOrderInput, paymentIntentId: string) => {
+    void reportPaymentFailed({ items: input.items, coupon: input.coupon, currency, paymentIntentId }).catch(() => {});
   };
 
   const paidId = (pi: { id: string; status: string } | undefined) => {
@@ -286,6 +292,7 @@ export function CheckoutForm({
     });
     if (error) {
       toast.error(error.message ?? "Your card was not charged");
+      if (error.type === "card_error") declined(input, intent.paymentIntentId);
       return null;
     }
     return paidId(paymentIntent);

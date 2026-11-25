@@ -26,6 +26,12 @@ async def lifespan(_: FastAPI):
 
 
 log = logging.getLogger("dermisque")
+if not log.handlers:  # uvicorn only sets up its own loggers; without this our INFO lines (emails sent, refunds) are dropped
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(levelname)s:     %(name)s: %(message)s"))
+    log.addHandler(_h)
+    log.setLevel(logging.INFO)
+    log.propagate = False
 
 
 async def _cart_reminder_loop():

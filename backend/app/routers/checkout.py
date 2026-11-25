@@ -17,7 +17,7 @@ from ..emails import notify
 from ..models import Address, Cart, Coupon, Order, OrderItem, Product, User
 from ..pricing import CouponError, compute_totals, find_valid_coupon
 from ..schemas import (
-    CardIn, CartLine, CheckoutIn, CouponApplied, CouponCheckIn, OrderOut, PaymentIntentIn, PaymentIntentOut,
+    CardIn, CartLine, CheckoutIn, CouponApplied, CouponCheckIn, Ok, OrderOut, PaymentIntentIn, PaymentIntentOut,
 )
 from ..security import get_current_user, get_optional_user
 from ..serializers import order_out
@@ -155,6 +155,17 @@ def create_payment_intent(
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(e))
     return PaymentIntentOut(client_secret=pi.client_secret, payment_intent_id=pi.id, amount=amount,
                             currency=body.currency)
+
+
+@router.post("/payment-failed", response_model=Ok)
+def payment_failed(body: PaymentIntentIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The storefront reports a declined card; Stripe confirms it, then the customer and the store are emailed."""
+    if settings.stripe_enabled and body.payment_intent_id:
+        reason = payments.new_decline(body.payment_intent_id, user)
+        if reason:
+            lines = _price_cart(db, body.items, user.id, None).lines
+            notify.checkout_failed(user, reason, lines, body.currency, rates()[body.currency], payment=True)
+    return Ok()
 
 
 @router.post("/orders", response_model=OrderOut, status_code=201)
