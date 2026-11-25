@@ -69,6 +69,7 @@ export function BlogEditor({
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const inlineRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
 
   const [f, setF] = useState({
     title: post?.title ?? "",
@@ -81,12 +82,15 @@ export function BlogEditor({
     featured: post?.featured ?? false,
     metaTitle: post?.metaTitle ?? "",
     metaDescription: post?.metaDescription ?? "",
+    schemaMarkup: post?.schemaMarkup ?? "",
     publishedAt: toLocalInput(post?.publishedAt),
   });
   const [tags, setTags] = useState<string[]>(post?.tags ?? []);
   const [tagInput, setTagInput] = useState("");
   const [productIds, setProductIds] = useState<string[]>(post?.productIds ?? []);
   const [mode, setMode] = useState<"write" | "preview" | "split">("write");
+
+  const schemaError = checkSchema(f.schemaMarkup);
 
   const allCategories = [...new Set([...DEFAULT_CATEGORIES, ...categories])];
   const words = f.content.trim() ? f.content.trim().split(/\s+/).length : 0;
@@ -142,8 +146,13 @@ export function BlogEditor({
   };
 
   const save = (status: "DRAFT" | "PUBLISHED") => {
-    if (f.title.trim().length < 3) return toast.error("Add a title (3+ characters)");
+    if (f.title.trim().length < 3) {
+      titleRef.current?.focus();
+      titleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return toast.error("Type the post title in the big title box at the top (3+ characters)");
+    }
     if (f.content.trim().length < 20) return toast.error("Write some content first (20+ characters)");
+    if (schemaError) return toast.error(`Schema markup: ${schemaError}`);
     const payload: BlogPayload = {
       title: f.title.trim(),
       slug: f.slug.trim() || undefined,
@@ -157,6 +166,7 @@ export function BlogEditor({
       featured: f.featured,
       metaTitle: f.metaTitle.trim() || null,
       metaDescription: f.metaDescription.trim() || null,
+      schemaMarkup: f.schemaMarkup.trim() || null,
       productIds,
       publishedAt: f.publishedAt ? new Date(f.publishedAt).toISOString() : null,
     };
@@ -236,13 +246,16 @@ export function BlogEditor({
         {/* main column */}
         <div className="space-y-6">
           <section className="rounded-3xl bg-white p-6">
+            <span className="label">Post title</span>
             <input
+              ref={titleRef}
               value={f.title}
               onChange={(e) => setF({ ...f, title: e.target.value })}
-              placeholder="Post title"
+              placeholder="Type the post title here"
               className="w-full bg-transparent font-display text-3xl outline-none placeholder:text-mute/50 sm:text-4xl"
             />
-            <div className="mt-3 flex items-center gap-1 text-sm text-mute">
+            <span className="mt-4 block text-xs text-mute">Web address (made from the title; change it only if you need to)</span>
+            <div className="mt-1 flex items-center gap-1 text-sm text-mute">
               <span>/blog/</span>
               <input
                 value={f.slug}
@@ -325,6 +338,22 @@ export function BlogEditor({
               <label>
                 <span className="label">Meta description (defaults to excerpt)</span>
                 <textarea className="input min-h-20" maxLength={300} value={f.metaDescription} onChange={(e) => setF({ ...f, metaDescription: e.target.value })} />
+              </label>
+              <label>
+                <span className="label">Schema markup (JSON-LD, optional)</span>
+                <textarea
+                  className={cn("input min-h-40 font-mono text-xs leading-relaxed", schemaError && "!border-[#e5484d]")}
+                  spellCheck={false}
+                  value={f.schemaMarkup}
+                  onChange={(e) => setF({ ...f, schemaMarkup: e.target.value })}
+                  placeholder={'{\n  "@context": "https://schema.org",\n  "@graph": [ { "@type": "Article", ... }, { "@type": "FAQPage", ... } ]\n}'}
+                />
+                <span className={cn("mt-1 block text-xs", schemaError ? "text-[#b42318]" : "text-mute")}>
+                  {schemaError ??
+                    (f.schemaMarkup.trim()
+                      ? "Valid JSON. It is added to this post's page for Google."
+                      : "Leave empty and an Article schema is made automatically from the title, excerpt, cover image and dates.")}
+                </span>
               </label>
               <div className="rounded-2xl border border-line p-4">
                 <p className="text-xs text-mute">Search preview</p>
@@ -493,4 +522,17 @@ export function DeleteBlogButton({ id, title, redirectTo }: { id: string; title:
       {pending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
     </button>
   );
+}
+
+/** null when the schema box is empty or holds valid JSON-LD, otherwise a short reason. */
+function checkSchema(raw: string): string | null {
+  const v = raw.replace(/<\/?script[^>]*>/gi, "").trim();
+  if (!v) return null;
+  try {
+    const data: unknown = JSON.parse(v);
+    if (typeof data !== "object" || data === null) return "must be a JSON object, like { \"@context\": \"https://schema.org\" }";
+    return null;
+  } catch (e) {
+    return `not valid JSON (${e instanceof Error ? e.message : "check commas and quotes"})`;
+  }
 }
