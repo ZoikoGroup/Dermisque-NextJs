@@ -91,6 +91,11 @@ export async function createPaymentIntent(input: PaymentIntentInput) {
   );
 }
 
+/** Tells the server a card was declined; it checks with Stripe, then emails the customer and the store. */
+export async function reportPaymentFailed(input: PaymentIntentInput) {
+  return attempt(() => api<{ ok: boolean }>("/api/checkout/payment-failed", { method: "POST", body: input }));
+}
+
 export async function placeOrder(input: PlaceOrderInput) {
   const res = await attempt(() => api<Order>("/api/checkout/orders", { method: "POST", body: input }));
   if (res.ok) {

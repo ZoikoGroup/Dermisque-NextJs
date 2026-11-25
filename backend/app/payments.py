@@ -78,6 +78,27 @@ def verify_paid(intent_id: str, user: User, amount: int, currency: str) -> None:
         raise PaymentError("Your bag changed while paying, so the payment was refunded. Please check out again.")
 
 
+def new_decline(intent_id: str, user: User) -> str | None:
+    """The bank's reason if this customer's payment was just declined and nobody has been told yet.
+
+    Read from Stripe (never trusted from the browser), and marked on the intent so a repeated report
+    of the same failed attempt does not send the emails twice."""
+    try:
+        c = _client()
+        pi = c.v1.payment_intents.retrieve(intent_id)
+        err = pi.last_payment_error.to_dict() if pi.last_payment_error else None
+        if _owner(pi) != user.id or pi.status == "succeeded" or not err or err.get("type") != "card_error":
+            return None
+        key = (err.get("charge") or (err.get("payment_method") or {}).get("id") or err.get("code") or "")[:200]
+        if pi.metadata.to_dict().get("decline_notified") == key:
+            return None
+        c.v1.payment_intents.update(pi.id, {"metadata": {"decline_notified": key}})
+        return err.get("message") or "Your card was declined"
+    except stripe.StripeError as e:
+        log.warning("Stripe could not load declined payment %s: %s", intent_id, e)
+        return None
+
+
 def refund(intent_id: str) -> None:
     try:
         _client().v1.refunds.create({"payment_intent": intent_id})
