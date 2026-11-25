@@ -189,6 +189,7 @@ export type BlogPost = BlogCard & {
   content: string;
   metaTitle: string | null;
   metaDescription: string | null;
+  schemaMarkup: string | null;
   productIds: string[];
 };
 

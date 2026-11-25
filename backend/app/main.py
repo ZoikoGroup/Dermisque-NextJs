@@ -54,6 +54,7 @@ def _add_missing_columns():
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_payment_ref ON orders (payment_ref)",
     )
     _add_column("messages", "details", "JSON")
+    _add_column("blog_posts", "schema_markup", "TEXT")
 
 
 def _add_column(table: str, column: str, ddl: str, *after: str) -> None:

@@ -238,6 +238,7 @@ class BlogPost(Base):
     meta_title: Mapped[str | None] = mapped_column(String(200))
     meta_description: Mapped[str | None] = mapped_column(String(300))
     product_ids: Mapped[list] = mapped_column(JSON, default=list)  # "Shop the post"
+    schema_markup: Mapped[str | None] = mapped_column(Text)  # custom schema.org JSON-LD for search engines
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)

@@ -31,6 +31,33 @@ export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): P
   };
 }
 
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.dermisque.com").replace(/\/$/, "");
+const absolute = (src: string) => (/^https?:\/\//.test(src) ? src : `${SITE}${src.startsWith("/") ? "" : "/"}${src}`);
+
+/** The post's own schema.org JSON-LD, or an Article built from its fields when none was written. */
+function schemaFor(post: NonNullable<Awaited<ReturnType<typeof getBlogPost>>>): string {
+  if (post.schemaMarkup) return post.schemaMarkup;
+  const url = `${SITE}/blog/${post.slug}`;
+  const org = { "@type": "Organization", name: "Dermisque", url: `${SITE}/` };
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${url}#article`,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    url,
+    headline: post.metaTitle || post.title,
+    description: post.metaDescription || post.excerpt || undefined,
+    image: post.coverImage ? absolute(post.coverImage) : undefined,
+    datePublished: post.publishedAt ?? undefined,
+    dateModified: post.updatedAt,
+    inLanguage: "en-US",
+    articleSection: post.category,
+    keywords: post.tags.length ? post.tags : undefined,
+    author: post.authorName && !/dermisque/i.test(post.authorName) ? { "@type": "Person", name: post.authorName } : org,
+    publisher: { ...org, logo: { "@type": "ImageObject", url: `${SITE}/logo.png` } },
+  });
+}
+
 export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">) {
   const { slug } = await params;
   const post = await getBlogPost(slug);
@@ -38,6 +65,11 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
 
   return (
     <article>
+      <script
+        type="application/ld+json"
+        // "<" is escaped so text inside the JSON can never close the script tag
+        dangerouslySetInnerHTML={{ __html: schemaFor(post).replace(/</g, "\\u003c") }}
+      />
       <ReadingProgress />
 
       <header className="container-luxe pt-10">

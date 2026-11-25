@@ -1,5 +1,7 @@
 """Request/response schemas. JSON uses camelCase; Python uses snake_case."""
 
+import json
+import re
 from datetime import date, datetime, timedelta, timezone
 from typing import Annotated, Generic, Literal, TypeVar
 
@@ -420,6 +422,7 @@ class BlogPostOut(BlogCard):
     content: str
     meta_title: str | None = None
     meta_description: str | None = None
+    schema_markup: str | None = None
     product_ids: list[str] = []
 
 
@@ -446,5 +449,21 @@ class BlogPostIn(Schema):
     featured: bool = False
     meta_title: str | None = Field(default=None, max_length=200)
     meta_description: str | None = Field(default=None, max_length=300)
+    schema_markup: str | None = Field(default=None, max_length=50_000)
     product_ids: list[str] = []
     published_at: UTCDatetime | None = None
+
+    @field_validator("schema_markup")
+    @classmethod
+    def _valid_schema(cls, v: str | None) -> str | None:
+        """Accepts schema.org JSON-LD, with or without the <script> tag around it; stores clean JSON."""
+        v = re.sub(r"</?script[^>]*>", "", v or "", flags=re.I).strip()
+        if not v:
+            return None
+        try:
+            data = json.loads(v)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Schema markup is not valid JSON (line {e.lineno}, column {e.colno}: {e.msg})") from None
+        if not isinstance(data, (dict, list)) or not data:
+            raise ValueError("Schema markup must be a JSON object, like { \"@context\": \"https://schema.org\", ... }")
+        return json.dumps(data, ensure_ascii=False, indent=2)

@@ -147,6 +147,7 @@ export type BlogPayload = {
   featured: boolean;
   metaTitle?: string | null;
   metaDescription?: string | null;
+  schemaMarkup?: string | null;
   productIds: string[];
   publishedAt?: string | null;
 };
