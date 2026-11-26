@@ -35,10 +35,12 @@ import {
   Undo2,
   Video,
   X,
+  FileUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteBlogPost, saveBlogPost, uploadImage, type BlogPayload } from "@/app/actions/admin";
 import { Markdown } from "@/components/blog/markdown";
+import { DocImport, type DocImportResult } from "@/components/admin/doc-import";
 import { Button } from "@/components/ui/button";
 import type { BlogPost, ProductCardData } from "@/lib/types";
 import { cn, isFuture } from "@/lib/utils";
@@ -300,6 +302,26 @@ export function BlogEditor({
     if (res.ok) insertBlock(`![${file.name.replace(/\.[^.]+$/, "").replace(/[[\]]/g, "")}](${res.data.url})`);
     else toast.error(res.error);
   };
+  /* ── Import from Word ── */
+  const [docOpen, setDocOpen] = useState(false);
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const docxFrom = (files: FileList | undefined) => [...(files ?? [])].find((x) => /\.docx?$/i.test(x.name));
+  const openImport = (file: File | null = null) => {
+    setDocFile(file);
+    setDocOpen(true);
+  };
+  const applyImport = (r: DocImportResult) => {
+    setF((x) => ({
+      ...x,
+      content: r.mode === "append" && x.content.trim() ? `${x.content.trimEnd()}\n\n${r.content}` : r.content,
+      title: r.title ?? x.title,
+      excerpt: r.excerpt ? r.excerpt.slice(0, 500) : x.excerpt,
+      coverImage: r.coverImage ?? x.coverImage,
+    }));
+    setMode("split");
+    toast.success("Document imported. Check the preview, then save or publish.");
+  };
+
   const imageFrom = (files: FileList | undefined) =>
     [...(files ?? [])].find((x) => /^image\/(jpeg|png|webp|avif)$/.test(x.type));
 
@@ -400,6 +422,16 @@ export function BlogEditor({
 
   return (
     <div className="space-y-6">
+      <DocImport
+        open={docOpen}
+        file={docFile}
+        onClose={() => {
+          setDocOpen(false);
+          setDocFile(null);
+        }}
+        onImport={applyImport}
+        has={{ content: !!f.content.trim(), title: !!f.title.trim(), excerpt: !!f.excerpt.trim(), cover: !!f.coverImage }}
+      />
       {/* hidden file inputs */}
       <input
         ref={coverRef}
@@ -440,6 +472,9 @@ export function BlogEditor({
             </Link>
           )}
           {post && <DeleteBlogButton id={post.id} title={post.title} redirectTo="/admin/blog" />}
+          <Button variant="outline" onClick={() => openImport()}>
+            <FileUp className="size-4" /> Import from Word
+          </Button>
           <Button variant="outline" disabled={pending} onClick={() => save("DRAFT")}>
             {isPublished ? "Unpublish (draft)" : "Save draft"}
           </Button>
@@ -579,6 +614,24 @@ export function BlogEditor({
                 ))}
               </div>
             </div>
+            {!f.content.trim() && mode !== "preview" && (
+              <button
+                type="button"
+                onClick={() => openImport()}
+                className="group mx-4 mt-4 flex w-[calc(100%-2rem)] items-center gap-4 rounded-2xl bg-brand-soft p-4 text-left ring-1 ring-line transition hover:ring-ink/30"
+              >
+                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-line transition group-hover:-translate-y-0.5">
+                  <FileUp className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">Already written it in Word or Google Docs?</span>
+                  <span className="block text-sm text-ink-soft">
+                    Import the .docx (or drop it here) and the headings, tables, lists and pictures are set up for you.
+                  </span>
+                </span>
+                <span className="hidden rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white sm:block">Import</span>
+              </button>
+            )}
             <div className={cn("grid", mode === "split" && "lg:grid-cols-2 lg:divide-x lg:divide-line", full && "min-h-0 flex-1")}>
               {mode !== "preview" && (
                 <textarea
@@ -597,6 +650,11 @@ export function BlogEditor({
                     if (e.dataTransfer.types.includes("Files")) e.preventDefault();
                   }}
                   onDrop={(e) => {
+                    const doc = docxFrom(e.dataTransfer.files);
+                    if (doc) {
+                      e.preventDefault();
+                      return openImport(doc);
+                    }
                     const img = imageFrom(e.dataTransfer.files);
                     if (img) {
                       e.preventDefault();

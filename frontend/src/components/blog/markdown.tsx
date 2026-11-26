@@ -46,7 +46,16 @@ function youtubeId(node: Element | undefined): string | null {
  * Renders post Markdown with the brand article styles (.dq-article in globals.css).
  * Raw HTML is not rendered (react-markdown default), so content can't inject scripts.
  */
-export function Markdown({ children, className }: { children: string; className?: string }) {
+export function Markdown({
+  children,
+  className,
+  resolveImage,
+}: {
+  children: string;
+  className?: string;
+  /** Maps an image link before display (the Word import previews pictures that aren't uploaded yet). */
+  resolveImage?: (src: string) => string;
+}) {
   return (
     <div className={cn("dq-article", className)}>
       <ReactMarkdown
@@ -88,8 +97,11 @@ export function Markdown({ children, className }: { children: string; className?
               <table>{children}</table>
             </div>
           ),
-          // eslint-disable-next-line @next/next/no-img-element
-          img: ({ src, alt }) => <img src={typeof src === "string" ? src : ""} alt={alt ?? ""} loading="lazy" />,
+          img: ({ src, alt }) => {
+            const url = typeof src === "string" ? src : "";
+            // eslint-disable-next-line @next/next/no-img-element
+            return <img src={resolveImage ? resolveImage(url) : url} alt={alt ?? ""} loading="lazy" />;
+          },
         }}
       >
         {children}
